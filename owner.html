@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SahaPanel — İşletmeci Paneli</title>
   <link rel="stylesheet" href="admin.css" />
+  <link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" />
   <style>
     .owner-slot-grid {
       display: grid;
@@ -92,6 +93,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="data.js"></script>
 <script>
 let currentSaha = null;
@@ -106,8 +108,8 @@ const slotGrid = document.getElementById('slotGrid');
 const logoutBtn = document.getElementById('logoutBtn');
 const toast = document.getElementById('toast');
 
-// --- URL Params Handling ---
 const params = new URLSearchParams(window.location.search);
+const urlCode = params.get('code');
 const urlDate = params.get('date');
 const urlTime = params.get('time');
 
@@ -116,15 +118,15 @@ if (urlTime) highlightTime = urlTime;
 
 dateSelect.value = currentTarih;
 
-function doLogin(code) {
-  const saha = getSahaByAccessCode(code);
+async function doLogin(code) {
+  const saha = await getSahaByAccessCode(code);
   if (saha) {
     currentSaha = saha;
     loginWrapper.style.display = 'none';
     adminWrapper.classList.add('visible');
     logoutBtn.style.display = 'flex';
     document.getElementById('sahaName').textContent = '🏟️ ' + saha.ad;
-    renderSlots();
+    await renderSlots();
     
     if (highlightTime) {
       setTimeout(() => {
@@ -140,29 +142,27 @@ function doLogin(code) {
   return false;
 }
 
-// Removed Auto-login from URL for security
+if (urlCode) { doLogin(urlCode); }
 
-loginForm.addEventListener('submit', (e) => {
+loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const code = document.getElementById('codeInput').value;
-  if (!doLogin(code)) {
+  if (!await doLogin(code)) {
     document.getElementById('loginError').classList.add('show');
   }
 });
 
-logoutBtn.addEventListener('click', () => {
-  window.location.href = 'owner.html';
-});
+logoutBtn.addEventListener('click', () => { window.location.href = 'owner.html'; });
 
-dateSelect.addEventListener('change', () => {
+dateSelect.addEventListener('change', async () => {
   currentTarih = dateSelect.value;
-  highlightTime = null; // Clear highlight on manual date change
-  renderSlots();
+  highlightTime = null;
+  await renderSlots();
 });
 
-function renderSlots() {
+async function renderSlots() {
   if (!currentSaha) return;
-  const slots = getSlots(currentSaha.id, currentTarih);
+  const slots = await getSlots(currentSaha.id, currentTarih);
   slotGrid.innerHTML = '';
 
   SAATLER.forEach(saat => {
@@ -176,11 +176,11 @@ function renderSlots() {
       <span class="time">${saat}</span>
       <span class="status">${slot.durum === 'bos' ? 'MÜSAİT' : 'DOLU'}</span>
     `;
-    card.addEventListener('click', () => {
+    card.addEventListener('click', async () => {
       const yeniDurum = slot.durum === 'bos' ? 'dolu' : 'bos';
-      setSlot(currentSaha.id, currentTarih, saat, yeniDurum, currentSaha.defaultFiyat);
-      if (saat === highlightTime) highlightTime = null; // Clear highlight after action
-      renderSlots();
+      await setSlot(currentSaha.id, currentTarih, saat, yeniDurum, currentSaha.default_fiyat);
+      if (saat === highlightTime) highlightTime = null;
+      await renderSlots();
       showToast('Güncellendi');
     });
     slotGrid.appendChild(card);
@@ -190,11 +190,11 @@ function renderSlots() {
 document.getElementById('allBosBtn').addEventListener('click', () => bulkUpdate('bos'));
 document.getElementById('allDoluBtn').addEventListener('click', () => bulkUpdate('dolu'));
 
-function bulkUpdate(durum) {
-  SAATLER.forEach(saat => {
-    setSlot(currentSaha.id, currentTarih, saat, durum, currentSaha.defaultFiyat);
-  });
-  renderSlots();
+async function bulkUpdate(durum) {
+  for (const saat of SAATLER) {
+    await setSlot(currentSaha.id, currentTarih, saat, durum, currentSaha.default_fiyat);
+  }
+  await renderSlots();
   showToast('Tümü Güncellendi');
 }
 

@@ -13,20 +13,16 @@ let currentSahaData = null;
 const sehirSel  = document.getElementById('sehirSelect');
 const sahaSel   = document.getElementById('sahaSelect');
 const content   = document.getElementById('contentArea');
-const waModal   = document.getElementById('waModal');
-const modalClose= document.getElementById('modalClose');
-const waLink    = document.getElementById('waLink');
-const modalInfo = document.getElementById('modalInfo');
 
 // ---------- INIT ----------
-function init() {
-  populateSehirler();
+async function init() {
+  await populateSehirler();
   sehirSel.addEventListener('change', onSehirChange);
   sahaSel.addEventListener('change', onSahaChange);
 }
 
-function populateSehirler() {
-  const sehirler = getSehirler();
+async function populateSehirler() {
+  const sehirler = await getSehirler();
   sehirSel.innerHTML = '<option value="">Şehir seçin...</option>';
   sehirler.forEach(s => {
     const opt = document.createElement('option');
@@ -36,14 +32,14 @@ function populateSehirler() {
   });
 }
 
-function onSehirChange() {
+async function onSehirChange() {
   const sehir = sehirSel.value;
   sahaSel.innerHTML = '<option value="">Saha seçin...</option>';
   sahaSel.disabled = !sehir;
   selectedSahaId = null;
 
   if (!sehir) return;
-  const sahalar = getSahalarBySehir(sehir);
+  const sahalar = await getSahalarBySehir(sehir);
   sahalar.forEach(s => {
     const opt = document.createElement('option');
     opt.value = s.id;
@@ -53,11 +49,10 @@ function onSehirChange() {
   sahaSel.disabled = false;
 }
 
-function onSahaChange() {
+async function onSahaChange() {
   selectedSahaId = sahaSel.value || null;
-  // gorBtn.disabled = !selectedSahaId;
   if (selectedSahaId) {
-    currentSahaData = getSahaById(selectedSahaId);
+    currentSahaData = await getSahaById(selectedSahaId);
     if (currentSahaData) renderContent();
   } else {
     content.innerHTML = `
@@ -70,22 +65,22 @@ function onSahaChange() {
   }
 }
 
-
 // ---------- RENDER ----------
-function renderContent() {
-  content.innerHTML = '';
+async function renderContent() {
+  content.innerHTML = '<div class="loading"><div class="spinner"></div> Veriler yükleniyor...</div>';
 
-  // --- Saha info bar ---
-  const slots = getSlots(selectedSahaId, selectedTarih);
+  const slots = await getSlots(selectedSahaId, selectedTarih);
   const bosCount  = Object.values(slots).filter(s => s.durum === 'bos').length;
   const doluCount = Object.values(slots).filter(s => s.durum === 'dolu').length;
+
+  content.innerHTML = ''; // Clear loading
 
   const infoBar = document.createElement('div');
   infoBar.className = 'saha-info anim-in';
   infoBar.innerHTML = `
     <div class="saha-info-left">
       <h2>🏟️ ${currentSahaData.ad}</h2>
-      <p>📍 ${currentSahaData.adres}</p>
+      <p>📍 ${currentSahaData.adres || currentSahaData.ilce + ', ' + currentSahaData.sehir}</p>
     </div>
     <div class="saha-stats">
       <span class="stat-badge bos">✅ ${bosCount} Boş</span>
@@ -94,11 +89,9 @@ function renderContent() {
   `;
   content.appendChild(infoBar);
 
-  // --- Date strip ---
   const strip = buildDateStrip();
   content.appendChild(strip);
 
-  // --- Legend ---
   const legend = document.createElement('div');
   legend.className = 'legend';
   legend.innerHTML = `
@@ -107,7 +100,6 @@ function renderContent() {
   `;
   content.appendChild(legend);
 
-  // --- Slots ---
   renderSlots(slots);
 }
 
@@ -129,17 +121,11 @@ function buildDateStrip() {
       <span class="day-num">${d.getDate()}</span>
       <span class="month-name">${AYLAR[d.getMonth()]}</span>
     `;
-    chip.addEventListener('click', () => {
+    chip.addEventListener('click', async () => {
       selectedTarih = iso;
       document.querySelectorAll('.date-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
-      const slots = getSlots(selectedSahaId, selectedTarih);
-      renderSlots(slots);
-      // update stats
-      const bosCount  = Object.values(slots).filter(s => s.durum === 'bos').length;
-      const doluCount = Object.values(slots).filter(s => s.durum === 'dolu').length;
-      document.querySelector('.stat-badge.bos').textContent  = `✅ ${bosCount} Boş`;
-      document.querySelector('.stat-badge.dolu').textContent = `🔴 ${doluCount} Dolu`;
+      await renderContent();
     });
     strip.appendChild(chip);
   }
@@ -147,14 +133,11 @@ function buildDateStrip() {
 }
 
 function renderSlots(slots) {
-  const existing = document.querySelector('.slots-grid');
-  if (existing) existing.remove();
-
   const grid = document.createElement('div');
   grid.className = 'slots-grid anim-in';
 
   SAATLER.forEach(saat => {
-    const slot = slots[saat] || { durum: 'bos', fiyat: currentSahaData.defaultFiyat };
+    const slot = slots[saat];
     const card = document.createElement('div');
     card.className = `slot-card ${slot.durum}`;
 
@@ -173,7 +156,7 @@ function renderSlots(slots) {
 
     if (slot.durum === 'bos') {
       card.addEventListener('click', () => {
-        const link = buildWALink(currentSahaData.wp, currentSahaData.ad, selectedTarih, saat, slot.fiyat, currentSahaData.accessCode);
+        const link = buildWALink(currentSahaData.wp, currentSahaData.ad, selectedTarih, saat, slot.fiyat, currentSahaData.access_code);
         window.open(link, '_blank');
       });
     }
@@ -189,8 +172,6 @@ function incrementHour(time) {
   const next = (h + 1) % 24;
   return `${String(next).padStart(2, '0')}:00`;
 }
-
-// Removed openWAModal and closeModal for direct WhatsApp link
 
 // ---------- START ----------
 init();

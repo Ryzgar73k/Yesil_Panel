@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SahaPanel — Süper Admin</title>
   <link rel="stylesheet" href="admin.css" />
+  <link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" />
 </head>
 <body>
 
@@ -64,9 +65,9 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="data.js"></script>
 <script>
-// Super Admin Logic
 let editingSahaId = null;
 const loginForm = document.getElementById('loginForm');
 const adminWrapper = document.getElementById('adminWrapper');
@@ -75,14 +76,14 @@ const sahaListCont = document.getElementById('sahaListContainer');
 const logoutBtn = document.getElementById('logoutBtn');
 const toast = document.getElementById('toast');
 
-loginForm.addEventListener('submit', (e) => {
+loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const pin = document.getElementById('pinInput').value;
   if (checkSuperAdminPin(pin)) {
     loginWrapper.style.display = 'none';
     adminWrapper.classList.add('visible');
     logoutBtn.style.display = 'flex';
-    renderSahaList();
+    await renderSahaList();
   } else {
     document.getElementById('pinError').classList.add('show');
   }
@@ -90,13 +91,16 @@ loginForm.addEventListener('submit', (e) => {
 
 logoutBtn.addEventListener('click', () => location.reload());
 
-function renderSahaList() {
-  const data = getData();
+async function renderSahaList() {
+  // Get all sahalar directly from Supabase
+  const { data: sahalar, error } = await supabase.from('sahalar').select('*');
+  if (error) return;
+
   sahaListCont.innerHTML = '';
   const grid = document.createElement('div');
   grid.className = 'saha-list';
 
-  data.sahalar.forEach(s => {
+  sahalar.forEach(s => {
     const card = document.createElement('div');
     card.className = 'saha-card';
     card.innerHTML = `
@@ -105,7 +109,7 @@ function renderSahaList() {
           <h3>${s.ad}</h3>
           <div class="saha-card-meta">
             <span>📍 ${s.ilce}, ${s.sehir}</span>
-            <span>🔑 Giriş Kodu: <strong style="color:#39D353; font-size:1.2em">${s.accessCode}</strong></span>
+            <span>🔑 Giriş Kodu: <strong style="color:#39D353; font-size:1.2em">${s.access_code}</strong></span>
           </div>
         </div>
       </div>
@@ -119,7 +123,7 @@ function renderSahaList() {
   sahaListCont.appendChild(grid);
 }
 
-document.getElementById('saveSahaBtn').addEventListener('click', () => {
+document.getElementById('saveSahaBtn').addEventListener('click', async () => {
   const ad = document.getElementById('fAd').value;
   const sehir = document.getElementById('fSehir').value;
   const ilce = document.getElementById('fIlce').value;
@@ -132,26 +136,26 @@ document.getElementById('saveSahaBtn').addEventListener('click', () => {
 
   const payload = { ad, sehir, ilce, wp, adres, defaultFiyat: fiyat || 500, accessCode };
   if (editingSahaId) {
-    updateSaha(editingSahaId, payload);
+    await updateSaha(editingSahaId, payload);
     showToast('Güncellendi');
   } else {
-    addSaha(payload);
+    await addSaha(payload);
     showToast('Eklendi');
   }
   resetForm();
-  renderSahaList();
+  await renderSahaList();
 });
 
-function editSaha(id) {
-  const s = getSahaById(id);
+async function editSaha(id) {
+  const s = await getSahaById(id);
   editingSahaId = id;
   document.getElementById('fAd').value = s.ad;
   document.getElementById('fSehir').value = s.sehir;
   document.getElementById('fIlce').value = s.ilce;
   document.getElementById('fWp').value = s.wp;
   document.getElementById('fAdres').value = s.adres;
-  document.getElementById('fFiyat').value = s.defaultFiyat;
-  document.getElementById('fCode').value = s.accessCode;
+  document.getElementById('fFiyat').value = s.default_fiyat;
+  document.getElementById('fCode').value = s.access_code;
   document.getElementById('formTitle').textContent = '✏️ Sahayı Düzenle';
   document.getElementById('cancelEditBtn').style.display = 'inline-flex';
 }
@@ -165,10 +169,10 @@ function resetForm() {
 
 document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
 
-function deleteSahaConfirm(id, ad) {
+async function deleteSahaConfirm(id, ad) {
   if (confirm(ad + ' sahasını silmek istediğinize emin misiniz?')) {
-    deleteSaha(id);
-    renderSahaList();
+    await deleteSaha(id);
+    await renderSahaList();
   }
 }
 
