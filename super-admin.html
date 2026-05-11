@@ -93,7 +93,7 @@ logoutBtn.addEventListener('click', () => location.reload());
 
 async function renderSahaList() {
   // Get all sahalar directly from Supabase
-  const { data: sahalar, error } = await supabase.from('sahalar').select('*');
+  const { data: sahalar, error } = await sb.from('sahalar').select('*');
   if (error) return;
 
   sahaListCont.innerHTML = '';
