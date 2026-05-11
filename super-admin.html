@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SahaPanel — Süper Admin</title>
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+
+<header class="header">
+  <a class="logo" href="index.html">
+    <div class="logo-icon">⚽</div>
+    <span class="logo-text">SahaPanel</span>
+    <span class="admin-badge">Süper Admin</span>
+  </a>
+  <nav class="header-nav">
+    <a href="index.html" class="btn btn-ghost">Müşteri Sitesi</a>
+    <button class="btn btn-ghost" id="logoutBtn" style="display:none">Çıkış</button>
+  </nav>
+</header>
+
+<div class="login-wrapper" id="loginWrapper">
+  <form class="login-card" id="loginForm">
+    <span class="login-icon">👑</span>
+    <h1>Süper Admin Girişi</h1>
+    <p>Saha eklemek ve yönetmek için Master PIN girin</p>
+    <div class="input-group">
+      <input type="password" id="pinInput" class="input-field pin-field" placeholder="••••••" maxlength="6" required />
+    </div>
+    <div class="error-msg" id="pinError">❌ Hatalı PIN kodu.</div>
+    <button type="submit" class="btn btn-primary" style="width:100%; margin-top:16px;">Giriş Yap</button>
+    <p style="color:#5A8565; font-size:12px; margin-top:16px;">Varsayılan PIN: <strong style="color:#39D353">123456</strong></p>
+  </form>
+</div>
+
+<div class="admin-wrapper" id="adminWrapper">
+  <div class="page-title">
+    <div>
+      <h2>🏟️ Saha Kayıt & Yönetim</h2>
+      <p>Yeni halı sahalar ekleyin ve işletmecilere giriş kodlarını verin.</p>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <h3 id="formTitle">➕ Yeni Saha Ekle</h3>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Saha Adı</label><input type="text" id="fAd" class="input-field" /></div>
+      <div class="form-group"><label class="form-label">Şehir</label><input type="text" id="fSehir" class="input-field" /></div>
+      <div class="form-group"><label class="form-label">İlçe</label><input type="text" id="fIlce" class="input-field" /></div>
+      <div class="form-group"><label class="form-label">WhatsApp (905...)</label><input type="text" id="fWp" class="input-field" /></div>
+      <div class="form-group full"><label class="form-label">Tam Adres</label><input type="text" id="fAdres" class="input-field" /></div>
+      <div class="form-group"><label class="form-label">Varsayılan Fiyat</label><input type="number" id="fFiyat" class="input-field" /></div>
+      <div class="form-group"><label class="form-label">Giriş Kodu (6 Haneli)</label><input type="text" id="fCode" class="input-field" placeholder="Boş bırakılırsa otomatik oluşur" maxlength="6" /></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" id="cancelEditBtn" style="display:none">İptal</button>
+      <button class="btn btn-primary" id="saveSahaBtn">Sahayı Kaydet</button>
+    </div>
+  </div>
+
+  <div id="sahaListContainer"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+// Super Admin Logic
+let editingSahaId = null;
+const loginForm = document.getElementById('loginForm');
+const adminWrapper = document.getElementById('adminWrapper');
+const loginWrapper = document.getElementById('loginWrapper');
+const sahaListCont = document.getElementById('sahaListContainer');
+const logoutBtn = document.getElementById('logoutBtn');
+const toast = document.getElementById('toast');
+
+loginForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const pin = document.getElementById('pinInput').value;
+  if (checkSuperAdminPin(pin)) {
+    loginWrapper.style.display = 'none';
+    adminWrapper.classList.add('visible');
+    logoutBtn.style.display = 'flex';
+    renderSahaList();
+  } else {
+    document.getElementById('pinError').classList.add('show');
+  }
+});
+
+logoutBtn.addEventListener('click', () => location.reload());
+
+function renderSahaList() {
+  const data = getData();
+  sahaListCont.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'saha-list';
+
+  data.sahalar.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'saha-card';
+    card.innerHTML = `
+      <div class="saha-card-header">
+        <div>
+          <h3>${s.ad}</h3>
+          <div class="saha-card-meta">
+            <span>📍 ${s.ilce}, ${s.sehir}</span>
+            <span>🔑 Giriş Kodu: <strong style="color:#39D353; font-size:1.2em">${s.accessCode}</strong></span>
+          </div>
+        </div>
+      </div>
+      <div class="saha-card-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editSaha('${s.id}')">Düzenle</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSahaConfirm('${s.id}', '${s.ad}')">Sil</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+  sahaListCont.appendChild(grid);
+}
+
+document.getElementById('saveSahaBtn').addEventListener('click', () => {
+  const ad = document.getElementById('fAd').value;
+  const sehir = document.getElementById('fSehir').value;
+  const ilce = document.getElementById('fIlce').value;
+  const wp = document.getElementById('fWp').value;
+  const adres = document.getElementById('fAdres').value;
+  const fiyat = parseInt(document.getElementById('fFiyat').value);
+  const accessCode = document.getElementById('fCode').value;
+
+  if (!ad || !sehir || !ilce || !wp) return showToast('Zorunlu alanları doldurun', true);
+
+  const payload = { ad, sehir, ilce, wp, adres, defaultFiyat: fiyat || 500, accessCode };
+  if (editingSahaId) {
+    updateSaha(editingSahaId, payload);
+    showToast('Güncellendi');
+  } else {
+    addSaha(payload);
+    showToast('Eklendi');
+  }
+  resetForm();
+  renderSahaList();
+});
+
+function editSaha(id) {
+  const s = getSahaById(id);
+  editingSahaId = id;
+  document.getElementById('fAd').value = s.ad;
+  document.getElementById('fSehir').value = s.sehir;
+  document.getElementById('fIlce').value = s.ilce;
+  document.getElementById('fWp').value = s.wp;
+  document.getElementById('fAdres').value = s.adres;
+  document.getElementById('fFiyat').value = s.defaultFiyat;
+  document.getElementById('fCode').value = s.accessCode;
+  document.getElementById('formTitle').textContent = '✏️ Sahayı Düzenle';
+  document.getElementById('cancelEditBtn').style.display = 'inline-flex';
+}
+
+function resetForm() {
+  editingSahaId = null;
+  ['fAd','fSehir','fIlce','fWp','fAdres','fFiyat','fCode'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('formTitle').textContent = '➕ Yeni Saha Ekle';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+}
+
+document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
+
+function deleteSahaConfirm(id, ad) {
+  if (confirm(ad + ' sahasını silmek istediğinize emin misiniz?')) {
+    deleteSaha(id);
+    renderSahaList();
+  }
+}
+
+function showToast(msg, err=false) {
+  toast.textContent = msg;
+  toast.className = 'toast show' + (err ? ' error' : '');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

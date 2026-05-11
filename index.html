@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Halı Saha Müsaitlik — Sahaları Keşfet</title>
+  <meta name="description" content="Şehrinizdeki halı sahaların boş saatlerini ve fiyatlarını anında görün. WhatsApp ile direkt iletişime geçin." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" />
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <a class="logo" href="index.html">
+    <div class="logo-icon">⚽</div>
+    <span class="logo-text">SahaPanel</span>
+  </a>
+  <nav class="header-nav">
+    <a href="owner.html" class="btn btn-ghost">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Saha Sahibi Girişi
+    </a>
+  </nav>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+      Gerçek Zamanlı Müsaitlik
+    </div>
+    <h1>
+      Yakınınızdaki<br/>
+      <span class="highlight">Halı Sahaları</span> Bulun
+    </h1>
+    <p>Şehir ve saha seçin, boş saatleri görün, WhatsApp ile anında iletişime geçin. Randevu yok, karmaşa yok.</p>
+  </section>
+
+  <!-- SELECTOR -->
+  <div class="selector-card">
+    <div class="selector-row">
+      <div class="field-group">
+        <label class="field-label" for="sehirSelect">📍 Şehir</label>
+        <select id="sehirSelect" class="field-select">
+          <option value="">Şehir seçin...</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="sahaSelect">🏟️ Halı Saha</label>
+        <select id="sahaSelect" class="field-select" disabled>
+          <option value="">Önce şehir seçin</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT AREA -->
+  <div id="contentArea">
+    <div class="empty-state">
+      <span class="empty-icon">🏟️</span>
+      <h3>Saha Seçin</h3>
+      <p>Yukarıdan şehir ve saha seçerek<br/>müsait saatleri görüntüleyin.</p>
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <p>SahaPanel &copy; 2026 — <a href="owner.html">İşletmeci Girişi</a> | <a href="super-admin.html">Sistem Yönetimi</a></p>
+</footer>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

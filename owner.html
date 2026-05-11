@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SahaPanel — İşletmeci Paneli</title>
+  <link rel="stylesheet" href="admin.css" />
+  <style>
+    .owner-slot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .owner-slot {
+      padding: 20px;
+      border-radius: 12px;
+      border: 2px solid var(--dark-border);
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .owner-slot.bos { background: rgba(57, 211, 83, 0.1); border-color: #39D353; color: #39D353; }
+    .owner-slot.dolu { background: rgba(231, 76, 60, 0.1); border-color: #E74C3C; color: #E74C3C; }
+    .owner-slot:hover { transform: scale(1.02); }
+    .owner-slot .time { font-size: 24px; font-weight: 800; display: block; }
+    .owner-slot .status { font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .owner-slot.highlight {
+      border-color: #39D353;
+      box-shadow: 0 0 20px #39D353;
+      animation: glow 1.5s infinite alternate;
+      transform: scale(1.05);
+    }
+    @keyframes glow {
+      from { box-shadow: 0 0 10px #39D353; }
+      to { box-shadow: 0 0 30px #39D353; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <a class="logo" href="index.html">
+    <div class="logo-icon">⚽</div>
+    <span class="logo-text">SahaPanel</span>
+    <span class="admin-badge">İşletmeci</span>
+  </a>
+  <nav class="header-nav">
+    <button class="btn btn-ghost" id="logoutBtn" style="display:none">Çıkış</button>
+  </nav>
+</header>
+
+<div class="login-wrapper" id="loginWrapper">
+  <form class="login-card" id="loginForm">
+    <span class="login-icon">🔑</span>
+    <h1>İşletmeci Girişi</h1>
+    <p>Sahanızı yönetmek için size verilen 6 haneli kodu girin</p>
+    <div class="input-group">
+      <input type="text" id="codeInput" class="input-field pin-field" placeholder="000000" maxlength="6" required />
+    </div>
+    <div class="error-msg" id="loginError">❌ Hatalı veya geçersiz kod.</div>
+    <button type="submit" class="btn btn-primary" style="width:100%; margin-top:16px;">Yönetime Başla</button>
+  </form>
+</div>
+
+<div class="admin-wrapper" id="adminWrapper">
+  <div class="page-title">
+    <div>
+      <h2 id="sahaName">🏟️ Yükleniyor...</h2>
+      <p>Müşterilerinizin göreceği saatleri buradan hızlıca güncelleyin.</p>
+    </div>
+  </div>
+
+  <div class="form-card" style="margin-bottom:20px">
+    <div class="form-group">
+      <label class="form-label">Tarih Seçin</label>
+      <input type="date" id="dateSelect" class="input-field" style="max-width:300px" />
+    </div>
+  </div>
+
+  <div class="slot-manager">
+    <div class="bulk-bar" style="margin-bottom:20px">
+      <button class="btn btn-ghost" id="allBosBtn">Tümünü Boş Yap</button>
+      <button class="btn btn-danger" id="allDoluBtn">Tümünü Dolu Yap</button>
+    </div>
+    <div id="slotGrid" class="owner-slot-grid"></div>
+    <div class="slot-save-bar">
+      <p>Değişiklikler anında kaydedilir ve sitede görünür.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+let currentSaha = null;
+let currentTarih = todayStr();
+let highlightTime = null;
+
+const loginForm = document.getElementById('loginForm');
+const adminWrapper = document.getElementById('adminWrapper');
+const loginWrapper = document.getElementById('loginWrapper');
+const dateSelect = document.getElementById('dateSelect');
+const slotGrid = document.getElementById('slotGrid');
+const logoutBtn = document.getElementById('logoutBtn');
+const toast = document.getElementById('toast');
+
+// --- URL Params Handling ---
+const params = new URLSearchParams(window.location.search);
+const urlDate = params.get('date');
+const urlTime = params.get('time');
+
+if (urlDate) currentTarih = urlDate;
+if (urlTime) highlightTime = urlTime;
+
+dateSelect.value = currentTarih;
+
+function doLogin(code) {
+  const saha = getSahaByAccessCode(code);
+  if (saha) {
+    currentSaha = saha;
+    loginWrapper.style.display = 'none';
+    adminWrapper.classList.add('visible');
+    logoutBtn.style.display = 'flex';
+    document.getElementById('sahaName').textContent = '🏟️ ' + saha.ad;
+    renderSlots();
+    
+    if (highlightTime) {
+      setTimeout(() => {
+        const target = document.querySelector(`[data-time="${highlightTime}"]`);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.classList.add('highlight');
+        }
+      }, 500);
+    }
+    return true;
+  }
+  return false;
+}
+
+// Removed Auto-login from URL for security
+
+loginForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const code = document.getElementById('codeInput').value;
+  if (!doLogin(code)) {
+    document.getElementById('loginError').classList.add('show');
+  }
+});
+
+logoutBtn.addEventListener('click', () => {
+  window.location.href = 'owner.html';
+});
+
+dateSelect.addEventListener('change', () => {
+  currentTarih = dateSelect.value;
+  highlightTime = null; // Clear highlight on manual date change
+  renderSlots();
+});
+
+function renderSlots() {
+  if (!currentSaha) return;
+  const slots = getSlots(currentSaha.id, currentTarih);
+  slotGrid.innerHTML = '';
+
+  SAATLER.forEach(saat => {
+    const slot = slots[saat];
+    const card = document.createElement('div');
+    card.className = 'owner-slot ' + slot.durum;
+    card.dataset.time = saat;
+    if (saat === highlightTime) card.classList.add('highlight');
+
+    card.innerHTML = `
+      <span class="time">${saat}</span>
+      <span class="status">${slot.durum === 'bos' ? 'MÜSAİT' : 'DOLU'}</span>
+    `;
+    card.addEventListener('click', () => {
+      const yeniDurum = slot.durum === 'bos' ? 'dolu' : 'bos';
+      setSlot(currentSaha.id, currentTarih, saat, yeniDurum, currentSaha.defaultFiyat);
+      if (saat === highlightTime) highlightTime = null; // Clear highlight after action
+      renderSlots();
+      showToast('Güncellendi');
+    });
+    slotGrid.appendChild(card);
+  });
+}
+
+document.getElementById('allBosBtn').addEventListener('click', () => bulkUpdate('bos'));
+document.getElementById('allDoluBtn').addEventListener('click', () => bulkUpdate('dolu'));
+
+function bulkUpdate(durum) {
+  SAATLER.forEach(saat => {
+    setSlot(currentSaha.id, currentTarih, saat, durum, currentSaha.defaultFiyat);
+  });
+  renderSlots();
+  showToast('Tümü Güncellendi');
+}
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.className = 'toast show';
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
