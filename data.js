@@ -2,14 +2,14 @@
 // YESIL PANEL — Supabase Altyapısı
 // =============================
 
-const SUPABASE_URL = 'https://xualunumuphfunswjrodx.supabase.co';
+const SUPABASE_URL = 'https://xualunumphfunswjrodx.supabase.co/rest/v1/';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWx1bnVtcGhmdW5zd2pyb2R4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1Mjc0MDUsImV4cCI6MjA5NDEwMzQwNX0.BmnUx69s_ebyUrq3kO3cmV41ujv3xaTkvy8u9WWQ4bA';
 
 // İsim çakışmasını önlemek için 'sb' adını kullanıyoruz
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const SAATLER = [
-  '18:00','19:00','20:00','21:00','22:00','23:00','00:00'
+  '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00'
 ];
 
 const MASTER_PIN = '194673'; // İstediğin yeni şifre
@@ -40,16 +40,16 @@ function buildWALink(wp, sahaAd, tarih, saat, fiyat, accessCode) {
 }
 
 // --- Animasyon Fonksiyonu ---
-window.showTransition = function(url) {
+window.showTransition = function (url) {
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#1A1E1C;z-index:9999;display:flex;justify-content:center;align-items:center;opacity:0;transition:opacity 0.3s ease;';
   overlay.innerHTML = '<div style="font-size:80px; animation:spin-bounce 0.8s infinite ease-in-out;">⚽</div><style>@keyframes spin-bounce { 0% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-30px) rotate(180deg); } 100% { transform: translateY(0) rotate(360deg); } }</style>';
   document.body.appendChild(overlay);
-  
+
   // Trigger reflow
   overlay.offsetHeight;
   overlay.style.opacity = '1';
-  
+
   setTimeout(() => {
     window.location.href = url;
   }, 400);
@@ -115,7 +115,7 @@ async function setSlot(sahaId, tarih, saat, durum, fiyat) {
       durum: durum,
       fiyat: fiyat
     }, { onConflict: 'saha_id, tarih, saat' });
-  
+
   if (error) console.error('SetSlot error:', error);
   return !error;
 }
