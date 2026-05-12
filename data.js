@@ -39,6 +39,22 @@ function buildWALink(wp, sahaAd, tarih, saat, fiyat, accessCode) {
   return `https://wa.me/${wp}?text=${msg}`;
 }
 
+// --- Animasyon Fonksiyonu ---
+window.showTransition = function(url) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#1A1E1C;z-index:9999;display:flex;justify-content:center;align-items:center;opacity:0;transition:opacity 0.3s ease;';
+  overlay.innerHTML = '<div style="font-size:80px; animation:spin-bounce 0.8s infinite ease-in-out;">⚽</div><style>@keyframes spin-bounce { 0% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-30px) rotate(180deg); } 100% { transform: translateY(0) rotate(360deg); } }</style>';
+  document.body.appendChild(overlay);
+  
+  // Trigger reflow
+  overlay.offsetHeight;
+  overlay.style.opacity = '1';
+  
+  setTimeout(() => {
+    window.location.href = url;
+  }, 400);
+};
+
 // --- Veri Fonksiyonları (ASYNC) ---
 
 async function getSehirler() {
@@ -115,7 +131,10 @@ async function addSaha(sahaObj) {
     access_code: sahaObj.accessCode || Math.floor(100000 + Math.random() * 900000).toString()
   }).select().single();
 
-  if (error) console.error("Saha ekleme hatası:", error);
+  if (error) {
+    console.error("Saha ekleme hatası:", error);
+    alert("Supabase Hatası (Muhtemelen RLS ayarları eksik): " + error.message);
+  }
   return error ? null : data;
 }
 
