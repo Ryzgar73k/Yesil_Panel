@@ -80,14 +80,46 @@
   </div>
 
   <div class="slot-manager">
-    <div class="bulk-bar" style="margin-bottom:20px">
-      <button class="btn btn-ghost" id="allBosBtn">Tümünü Boş Yap</button>
-      <button class="btn btn-danger" id="allDoluBtn">Tümünü Dolu Yap</button>
+    <div class="bulk-bar" style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <button class="btn btn-ghost" id="allBosBtn">Tümünü Boş Yap</button>
+        <button class="btn btn-danger" id="allDoluBtn">Tümünü Dolu Yap</button>
+      </div>
+      <button class="btn btn-ghost" id="aboneModalBtn" style="border:1px solid var(--dark-border);">⭐ Abonelikleri Yönet</button>
     </div>
     <div id="slotGrid" class="owner-slot-grid"></div>
     <div class="slot-save-bar">
       <p>Değişiklikler anında kaydedilir ve sitede görünür.</p>
     </div>
+  </div>
+</div>
+
+<!-- Abonelik Modal -->
+<div id="aboneModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+  <div style="background:var(--bg); padding:20px; border-radius:12px; width:90%; max-width:400px; border:2px solid var(--dark-border);">
+    <h3>⭐ Abonelik Yönetimi</h3>
+    <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Seçilen gün ve saat her hafta otomatik olarak "ABONE" gözükecektir.</p>
+    
+    <div style="display:flex; gap:10px; margin-bottom:15px;">
+      <select id="aboneGun" class="input-field" style="flex:1;">
+        <option value="1">Pazartesi</option>
+        <option value="2">Salı</option>
+        <option value="3">Çarşamba</option>
+        <option value="4">Perşembe</option>
+        <option value="5">Cuma</option>
+        <option value="6">Cumartesi</option>
+        <option value="0">Pazar</option>
+      </select>
+      <select id="aboneSaat" class="input-field" style="flex:1;"></select>
+    </div>
+    
+    <button id="addAboneBtn" class="btn btn-primary" style="width:100%; margin-bottom:15px;">Abonelik Ekle</button>
+    
+    <div id="aboneList" style="max-height:200px; overflow-y:auto; border-top:1px solid var(--dark-border); padding-top:10px;">
+      <!-- List of active subscriptions -->
+    </div>
+    
+    <button class="btn btn-ghost" onclick="document.getElementById('aboneModal').style.display='none'" style="width:100%; margin-top:10px;">Kapat</button>
   </div>
 </div>
 
@@ -126,6 +158,7 @@ async function doLogin(code) {
     adminWrapper.classList.add('visible');
     logoutBtn.style.display = 'flex';
     document.getElementById('sahaName').textContent = '🏟️ ' + saha.ad;
+    initAboneModal();
     await renderSlots();
     
     if (highlightTime) {
@@ -174,10 +207,23 @@ async function renderSlots() {
 
     card.innerHTML = `
       <span class="time">${saat}</span>
-      <span class="status">${slot.durum === 'bos' ? 'MÜSAİT' : 'DOLU'}</span>
+      <span class="status">${slot.durum === 'abone' ? 'ABONE' : (slot.durum === 'bos' ? 'MÜSAİT' : 'DOLU')}</span>
     `;
     card.addEventListener('click', async () => {
-      const yeniDurum = slot.durum === 'bos' ? 'dolu' : 'bos';
+      // Abone durumundaki saat tıklanınca "boşa" düşer, boş ise dolu olur.
+      const yeniDurum = (slot.durum === 'bos') ? 'dolu' : 'bos';
+      
+      if (yeniDurum === 'bos') {
+        const phones = await getBildirimTalepleri(currentSaha.id, currentTarih, saat);
+        if (phones && phones.length > 0) {
+          if (confirm(`Dikkat! Bu saati bekleyen ${phones.length} kişi var.\nOnlara WhatsApp üzerinden haber vermek ister misiniz?`)) {
+            const msg = encodeURIComponent(`Merhaba, takip ettiğiniz ${currentSaha.ad} sahasındaki ${formatTarih(currentTarih)} ${saat} seansı şu an BOŞALDI. Hemen rezervasyon yapabilirsiniz.`);
+            phones.forEach(p => window.open(`https://wa.me/${p}?text=${msg}`, '_blank'));
+          }
+          await clearBildirimTalepleri(currentSaha.id, currentTarih, saat);
+        }
+      }
+
       await setSlot(currentSaha.id, currentTarih, saat, yeniDurum, currentSaha.default_fiyat);
       if (saat === highlightTime) highlightTime = null;
       await renderSlots();
@@ -202,6 +248,55 @@ function showToast(msg) {
   toast.textContent = msg;
   toast.className = 'toast show';
   setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+// --- Abonelik Modal Mantığı ---
+const GUN_ISIMLERI = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+
+function initAboneModal() {
+  const saatSel = document.getElementById('aboneSaat');
+  saatSel.innerHTML = '';
+  SAATLER.forEach(s => saatSel.add(new Option(s, s)));
+  
+  document.getElementById('aboneModalBtn').addEventListener('click', () => {
+    document.getElementById('aboneModal').style.display = 'flex';
+    renderAbonelikler();
+  });
+
+  document.getElementById('addAboneBtn').addEventListener('click', async () => {
+    const g = parseInt(document.getElementById('aboneGun').value);
+    const s = document.getElementById('aboneSaat').value;
+    await toggleAbonelik(currentSaha.id, g, s, true);
+    await renderAbonelikler();
+    await renderSlots(); // Ana ekranı da güncelle
+  });
+}
+
+async function renderAbonelikler() {
+  const list = document.getElementById('aboneList');
+  list.innerHTML = 'Yükleniyor...';
+  const abonelikler = await getAbonelikler(currentSaha.id);
+  
+  if (abonelikler.length === 0) {
+    list.innerHTML = '<div style="font-size:12px; color:var(--text-muted); text-align:center;">Henüz abonelik yok.</div>';
+    return;
+  }
+  
+  list.innerHTML = '';
+  abonelikler.forEach(a => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px; background:rgba(255,255,255,0.05); margin-bottom:5px; border-radius:6px;';
+    item.innerHTML = `
+      <span style="font-size:14px; font-weight:600;">${GUN_ISIMLERI[a.gun]} - ${a.saat}</span>
+      <button class="btn btn-danger btn-sm" style="padding:4px 8px;">Sil</button>
+    `;
+    item.querySelector('button').addEventListener('click', async () => {
+      await toggleAbonelik(currentSaha.id, a.gun, a.saat, false);
+      await renderAbonelikler();
+      await renderSlots();
+    });
+    list.appendChild(item);
+  });
 }
 </script>
 </body>

@@ -139,7 +139,23 @@ function renderSlots(slots) {
   SAATLER.forEach(saat => {
     const slot = slots[saat];
     const card = document.createElement('div');
-    card.className = `slot-card ${slot.durum}`;
+    let statusHTML = '';
+    let hintHTML = '';
+    
+    if (slot.durum === 'bos') {
+      statusHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Müsait';
+      hintHTML = '<div class="slot-wa-hint">📱 WhatsApp\'a Tıkla</div>';
+    } else if (slot.durum === 'abone') {
+      statusHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg> ABONE';
+      hintHTML = '<div class="slot-notify-hint" style="color:#f39c12; font-size:13px; font-weight:600; margin-top:10px; cursor:pointer; padding:6px; background:rgba(243,156,18,0.1); border-radius:6px;">🔔 İptal Olursa Bildir</div>';
+    } else {
+      statusHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg> Dolu';
+      hintHTML = '<div class="slot-notify-hint" style="color:#f39c12; font-size:13px; font-weight:600; margin-top:10px; cursor:pointer; padding:6px; background:rgba(243,156,18,0.1); border-radius:6px;">🔔 İptal Olursa Bildir</div>';
+    }
+
+    // Abone görünümü için CSS class'ı (Dolu ile aynı temeli kullansın)
+    const cardClass = slot.durum === 'abone' ? 'dolu abone' : slot.durum;
+    card.className = `slot-card ${cardClass}`;
 
     const enSaat = incrementHour(saat);
     card.innerHTML = `
@@ -147,11 +163,9 @@ function renderSlots(slots) {
       <div class="slot-duration">1 Saatlik Kiralama · ${enSaat}'e kadar</div>
       <div class="slot-price">${slot.fiyat.toLocaleString('tr-TR')} ₺</div>
       <div class="slot-status">
-        ${slot.durum === 'bos'
-          ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Müsait'
-          : '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg> Dolu'}
+        ${statusHTML}
       </div>
-      ${slot.durum === 'bos' ? '<div class="slot-wa-hint">📱 WhatsApp\'a Tıkla</div>' : ''}
+      ${hintHTML}
     `;
 
     if (slot.durum === 'bos') {
@@ -159,6 +173,15 @@ function renderSlots(slots) {
         const link = buildWALink(currentSahaData.wp, currentSahaData.ad, selectedTarih, saat, slot.fiyat, currentSahaData.access_code);
         window.open(link, '_blank');
       });
+    } else {
+      // Abone veya Dolu ise bildirim isteği ekle
+      const hintBtn = card.querySelector('.slot-notify-hint');
+      if (hintBtn) {
+        hintBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          requestNotification(currentSahaData.id, selectedTarih, saat);
+        });
+      }
     }
 
     grid.appendChild(card);
@@ -171,6 +194,26 @@ function incrementHour(time) {
   const [h] = time.split(':').map(Number);
   const next = (h + 1) % 24;
   return `${String(next).padStart(2, '0')}:00`;
+}
+
+async function requestNotification(sahaId, tarih, saat) {
+  const tel = prompt(`${tarih} ${saat} seansı iptal olursa size WhatsApp'tan haber vereceğiz.\nLütfen telefon numaranızı başında sıfır olmadan girin (Örn: 5xxxxxxxxx):`);
+  if (!tel) return; // Kullanıcı iptal etti
+  
+  const cleanTel = tel.replace(/[^0-9]/g, '');
+  if (cleanTel.length < 10) {
+    alert("Geçersiz telefon numarası. Lütfen 10 haneli numaranızı eksiksiz girin.");
+    return;
+  }
+  
+  const formattedTel = cleanTel.length === 10 ? '90' + cleanTel : (cleanTel.startsWith('0') ? '9' + cleanTel : cleanTel);
+  
+  const success = await addBildirimTalep(sahaId, tarih, saat, formattedTel);
+  if (success) {
+    alert("Talebiniz alındı! İptal durumunda size ilk fırsatta mesaj atılacaktır.");
+  } else {
+    alert("Bir hata oluştu, lütfen internet bağlantınızı kontrol edip tekrar deneyin.");
+  }
 }
 
 // ---------- START ----------

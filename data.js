@@ -88,6 +88,19 @@ async function getSlots(sahaId, tarih) {
   const saha = await getSahaById(sahaId);
   if (!saha) return {};
 
+  // O günün haftanın hangi günü olduğunu bul (0:Pazar - 6:Cumartesi)
+  const d = new Date(tarih);
+  const gun = d.getDay();
+
+  // Abonelikleri çek
+  const { data: aboneData } = await sb
+    .from('abonelikler')
+    .select('saat')
+    .eq('saha_id', sahaId)
+    .eq('gun', gun);
+  
+  const aboneSaatler = aboneData ? aboneData.map(a => a.saat) : [];
+
   const { data, error } = await sb
     .from('slots')
     .select('*')
@@ -97,12 +110,63 @@ async function getSlots(sahaId, tarih) {
   const result = {};
   SAATLER.forEach(s => {
     const dbSlot = data?.find(d => d.saat === s);
+    const isAbone = aboneSaatler.includes(s);
+    
+    // Eğer abone ise ve özel olarak o gün "bos" olarak işaretlenmemişse (işletmeci nadiren iptal edebilir)
+    // Abone her zaman doludur.
+    let durum = isAbone ? 'abone' : 'bos';
+    if (dbSlot) {
+       // Veritabanında o güne özel bir kayıt varsa onu baz al (abone olsa bile belki işletmeci o haftalık iptal etti)
+       // Fakat genel kural: Abone ise dolu/abone yazarız.
+       durum = (isAbone && dbSlot.durum !== 'bos') ? 'abone' : dbSlot.durum;
+       // Eğer slot veritabanında 'bos' ise, abone olsa dahi boşa çıkar. Bu işletmeciye esneklik sağlar.
+    }
+
     result[s] = {
-      durum: dbSlot ? dbSlot.durum : 'bos',
+      durum: durum,
       fiyat: dbSlot && dbSlot.fiyat ? dbSlot.fiyat : saha.default_fiyat
     };
   });
   return result;
+}
+
+// --- Abonelik API ---
+async function getAbonelikler(sahaId) {
+  const { data, error } = await sb.from('abonelikler').select('*').eq('saha_id', sahaId);
+  return error ? [] : data;
+}
+
+async function toggleAbonelik(sahaId, gun, saat, isAdding) {
+  if (isAdding) {
+    const { error } = await sb.from('abonelikler').insert({ saha_id: sahaId, gun, saat });
+    if(error) console.error(error);
+  } else {
+    const { error } = await sb.from('abonelikler').delete().match({ saha_id: sahaId, gun, saat });
+    if(error) console.error(error);
+  }
+}
+
+// --- Bildirim API ---
+async function addBildirimTalep(sahaId, tarih, saat, telefon) {
+  const { error } = await sb.from('bildirim_talepleri').insert({
+    saha_id: sahaId,
+    tarih,
+    saat,
+    telefon
+  });
+  return !error;
+}
+
+async function getBildirimTalepleri(sahaId, tarih, saat) {
+  const { data, error } = await sb
+    .from('bildirim_talepleri')
+    .select('telefon')
+    .match({ saha_id: sahaId, tarih, saat });
+  return error ? [] : data.map(d => d.telefon);
+}
+
+async function clearBildirimTalepleri(sahaId, tarih, saat) {
+  await sb.from('bildirim_talepleri').delete().match({ saha_id: sahaId, tarih, saat });
 }
 
 async function setSlot(sahaId, tarih, saat, durum, fiyat) {
