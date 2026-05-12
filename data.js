@@ -2,7 +2,7 @@
 // YESIL PANEL — Supabase Altyapısı
 // =============================
 
-const SUPABASE_URL = 'https://xualunumphfunswjrodx.supabase.co/rest/v1/';
+const SUPABASE_URL = 'https://xualunumphfunswjrodx.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWx1bnVtcGhmdW5zd2pyb2R4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1Mjc0MDUsImV4cCI6MjA5NDEwMzQwNX0.BmnUx69s_ebyUrq3kO3cmV41ujv3xaTkvy8u9WWQ4bA';
 
 // İsim çakışmasını önlemek için 'sb' adını kullanıyoruz
@@ -153,7 +153,14 @@ async function updateSaha(id, updates) {
 }
 
 async function deleteSaha(id) {
+  // İlişkili saatleri (slots) sil (Eğer 'on delete cascade' Supabase'de çalışmazsa diye manuel)
+  await sb.from('slots').delete().eq('saha_id', id);
+
   const { error } = await sb.from('sahalar').delete().eq('id', id);
+  if (error) {
+    console.error("Silme hatası:", error);
+    alert("Silme hatası: " + error.message);
+  }
   return !error;
 }
 
