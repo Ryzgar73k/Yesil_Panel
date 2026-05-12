@@ -77,15 +77,29 @@ async function renderContent() {
 
   const infoBar = document.createElement('div');
   infoBar.className = 'saha-info anim-in';
+  
+  const imgSrc = currentSahaData.gorsel || 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80';
+  const query = currentSahaData.harita || currentSahaData.adres || (currentSahaData.ad + ' ' + currentSahaData.ilce);
+  const mapsIframe = `<iframe width="100%" height="250" style="border:0; border-radius:12px; margin-top:15px; display:none;" id="mapIframe" loading="lazy" allowfullscreen src="https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=14&ie=UTF8&iwloc=&output=embed"></iframe>`;
+
   infoBar.innerHTML = `
-    <div class="saha-info-left">
-      <h2>🏟️ ${currentSahaData.ad}</h2>
-      <p>📍 ${currentSahaData.adres || currentSahaData.ilce + ', ' + currentSahaData.sehir}</p>
+    <div style="display:flex; justify-content:space-between; width:100%; gap:15px; align-items:flex-start;">
+      <div class="saha-info-left" style="flex:1;">
+        <h2>🏟️ ${currentSahaData.ad}</h2>
+        <p style="cursor:pointer; color:var(--primary); font-weight:600; display:inline-flex; align-items:center; gap:5px; margin-bottom:12px; padding:6px 12px; background:rgba(57,211,83,0.1); border-radius:6px;" onclick="const f = document.getElementById('mapIframe'); f.style.display = f.style.display === 'none' ? 'block' : 'none';">
+          📍 Haritada Gör
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </p>
+        <div class="saha-stats">
+          <span class="stat-badge bos">✅ ${bosCount} Boş</span>
+          <span class="stat-badge dolu">🔴 ${doluCount} Dolu</span>
+        </div>
+      </div>
+      <div class="saha-info-right" style="width:100px; height:100px; flex-shrink:0;">
+        <img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:12px; border:2px solid var(--dark-border); box-shadow:0 4px 10px rgba(0,0,0,0.3);" alt="${currentSahaData.ad}" onerror="this.src='https://images.unsplash.com/photo-1575361204480-aadea25e6e68?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'" />
+      </div>
     </div>
-    <div class="saha-stats">
-      <span class="stat-badge bos">✅ ${bosCount} Boş</span>
-      <span class="stat-badge dolu">🔴 ${doluCount} Dolu</span>
-    </div>
+    ${mapsIframe}
   `;
   content.appendChild(infoBar);
 
@@ -147,10 +161,10 @@ function renderSlots(slots) {
       hintHTML = '<div class="slot-wa-hint">📱 WhatsApp\'a Tıkla</div>';
     } else if (slot.durum === 'abone') {
       statusHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg> ABONE';
-      hintHTML = '<div class="slot-notify-hint" style="color:#f39c12; font-size:13px; font-weight:600; margin-top:10px; cursor:pointer; padding:6px; background:rgba(243,156,18,0.1); border-radius:6px;">🔔 İptal Olursa Bildir</div>';
+      hintHTML = '<div class="slot-notify-hint" style="pointer-events:auto; color:#f39c12; font-size:13px; font-weight:600; margin-top:10px; cursor:pointer; padding:6px; background:rgba(243,156,18,0.1); border-radius:6px;">🔔 İptal Olursa Bildir</div>';
     } else {
       statusHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg> Dolu';
-      hintHTML = '<div class="slot-notify-hint" style="color:#f39c12; font-size:13px; font-weight:600; margin-top:10px; cursor:pointer; padding:6px; background:rgba(243,156,18,0.1); border-radius:6px;">🔔 İptal Olursa Bildir</div>';
+      hintHTML = '<div class="slot-notify-hint" style="pointer-events:auto; color:#f39c12; font-size:13px; font-weight:600; margin-top:10px; cursor:pointer; padding:6px; background:rgba(243,156,18,0.1); border-radius:6px;">🔔 İptal Olursa Bildir</div>';
     }
 
     // Abone görünümü için CSS class'ı (Dolu ile aynı temeli kullansın)

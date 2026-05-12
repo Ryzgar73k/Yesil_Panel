@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SahaPanel — Süper Admin</title>
   <link rel="stylesheet" href="admin.css" />
-  <link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>" />
 </head>
 <body>
 
@@ -51,6 +51,8 @@
       <div class="form-group"><label class="form-label">İlçe</label><input type="text" id="fIlce" class="input-field" /></div>
       <div class="form-group"><label class="form-label">WhatsApp (905...)</label><input type="text" id="fWp" class="input-field" /></div>
       <div class="form-group full"><label class="form-label">Tam Adres</label><input type="text" id="fAdres" class="input-field" /></div>
+      <div class="form-group"><label class="form-label">Görsel Yolu/Linki</label><input type="text" id="fGorsel" class="input-field" placeholder="Örn: images/saha1.jpg" /></div>
+      <div class="form-group"><label class="form-label">Harita Linki veya Yer Adı</label><input type="text" id="fHarita" class="input-field" placeholder="Örn: Gala Düğün Salonu" /></div>
       <div class="form-group"><label class="form-label">Varsayılan Fiyat</label><input type="number" id="fFiyat" class="input-field" /></div>
       <div class="form-group"><label class="form-label">Giriş Kodu (6 Haneli)</label><input type="text" id="fCode" class="input-field" placeholder="Boş bırakılırsa otomatik oluşur" maxlength="6" /></div>
     </div>
@@ -129,12 +131,14 @@ document.getElementById('saveSahaBtn').addEventListener('click', async () => {
   const ilce = document.getElementById('fIlce').value;
   const wp = document.getElementById('fWp').value;
   const adres = document.getElementById('fAdres').value;
+  const gorsel = document.getElementById('fGorsel').value;
+  const harita = document.getElementById('fHarita').value;
   const fiyat = parseInt(document.getElementById('fFiyat').value);
   const accessCode = document.getElementById('fCode').value;
 
   if (!ad || !sehir || !ilce || !wp) return showToast('Zorunlu alanları doldurun', true);
 
-  const payload = { ad, sehir, ilce, wp, adres, defaultFiyat: fiyat || 500, accessCode };
+  const payload = { ad, sehir, ilce, wp, adres, gorsel, harita, defaultFiyat: fiyat || 500, accessCode };
   if (editingSahaId) {
     await updateSaha(editingSahaId, payload);
     showToast('Güncellendi');
@@ -154,6 +158,8 @@ async function editSaha(id) {
   document.getElementById('fIlce').value = s.ilce;
   document.getElementById('fWp').value = s.wp;
   document.getElementById('fAdres').value = s.adres;
+  document.getElementById('fGorsel').value = s.gorsel || '';
+  document.getElementById('fHarita').value = s.harita || '';
   document.getElementById('fFiyat').value = s.default_fiyat;
   document.getElementById('fCode').value = s.access_code;
   document.getElementById('formTitle').textContent = '✏️ Sahayı Düzenle';
@@ -162,7 +168,7 @@ async function editSaha(id) {
 
 function resetForm() {
   editingSahaId = null;
-  ['fAd','fSehir','fIlce','fWp','fAdres','fFiyat','fCode'].forEach(id => document.getElementById(id).value = '');
+  ['fAd','fSehir','fIlce','fWp','fAdres','fGorsel','fHarita','fFiyat','fCode'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('formTitle').textContent = '➕ Yeni Saha Ekle';
   document.getElementById('cancelEditBtn').style.display = 'none';
 }

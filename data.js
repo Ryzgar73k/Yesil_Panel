@@ -139,7 +139,10 @@ async function getAbonelikler(sahaId) {
 async function toggleAbonelik(sahaId, gun, saat, isAdding) {
   if (isAdding) {
     const { error } = await sb.from('abonelikler').insert({ saha_id: sahaId, gun, saat });
-    if(error) console.error(error);
+    if(error) {
+      console.error(error);
+      alert("Abonelik eklenemedi (Supabase Hatası): " + error.message);
+    }
   } else {
     const { error } = await sb.from('abonelikler').delete().match({ saha_id: sahaId, gun, saat });
     if(error) console.error(error);
@@ -191,6 +194,8 @@ async function addSaha(sahaObj) {
     ilce: sahaObj.ilce,
     adres: sahaObj.adres,
     wp: sahaObj.wp,
+    gorsel: sahaObj.gorsel,
+    harita: sahaObj.harita,
     default_fiyat: sahaObj.defaultFiyat,
     access_code: sahaObj.accessCode || Math.floor(100000 + Math.random() * 900000).toString()
   }).select().single();
@@ -209,6 +214,8 @@ async function updateSaha(id, updates) {
     ilce: updates.ilce,
     adres: updates.adres,
     wp: updates.wp,
+    gorsel: updates.gorsel,
+    harita: updates.harita,
     default_fiyat: updates.defaultFiyat,
     access_code: updates.accessCode
   }).eq('id', id);
