@@ -86,13 +86,13 @@ async function renderContent() {
     <div style="display:flex; justify-content:space-between; width:100%; gap:15px; align-items:flex-start;">
       <div class="saha-info-left" style="flex:1;">
         <h2>🏟️ ${currentSahaData.ad}</h2>
-        <p style="cursor:pointer; color:var(--primary); font-weight:600; display:inline-flex; align-items:center; gap:5px; margin-bottom:12px; padding:6px 12px; background:rgba(57,211,83,0.1); border-radius:6px;" onclick="const f = document.getElementById('mapIframe'); f.style.display = f.style.display === 'none' ? 'block' : 'none';">
-          📍 Haritada Gör
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-        </p>
-        <div class="saha-stats">
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px;">${currentSahaData.adres || currentSahaData.ilce + ', ' + currentSahaData.sehir}</p>
+        <div class="saha-stats" style="display:flex; gap:10px; align-items:center;">
           <span class="stat-badge bos">✅ ${bosCount} Boş</span>
-          <span class="stat-badge dolu">🔴 ${doluCount} Dolu</span>
+          <span class="stat-badge" style="cursor:pointer; background:rgba(255,255,255,0.05); border:1px solid var(--dark-border); color:var(--text-light);" onclick="const f = document.getElementById('mapIframe'); f.style.display = f.style.display === 'none' ? 'block' : 'none';">
+            📍 Haritada Gör
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:4px;"><path d="M6 9l6 6 6-6"/></svg>
+          </span>
         </div>
       </div>
       <div class="saha-info-right" style="width:100px; height:100px; flex-shrink:0;">
