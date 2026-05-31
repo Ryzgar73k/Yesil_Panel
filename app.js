@@ -212,7 +212,7 @@ function buildDateStrip() {
 
   const dpInput = document.createElement('input');
   dpInput.type = 'date';
-  dpInput.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; z-index:10;';
+  dpInput.style.cssText = 'position:absolute; top:0; left:0; width:1px; height:1px; opacity:0; pointer-events:none;';
   
   const minD = new Date(today);
   dpInput.min = minD.toISOString().split('T')[0];
