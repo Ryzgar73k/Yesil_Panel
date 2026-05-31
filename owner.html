@@ -86,6 +86,7 @@
         <button class="btn btn-danger" id="allDoluBtn">Tümünü Dolu Yap</button>
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-ghost" id="saatModalBtn" style="border:1px solid var(--dark-border);">⏰ Çalışma Saatleri</button>
         <button class="btn btn-ghost" id="fiyatModalBtn" style="border:1px solid var(--dark-border);">💰 Fiyatlandırma</button>
         <button class="btn btn-ghost" id="aboneModalBtn" style="border:1px solid var(--dark-border);">⭐ Abonelikleri Yönet</button>
       </div>
@@ -124,6 +125,21 @@
     </div>
 
     <button class="btn btn-ghost" onclick="document.getElementById('fiyatModal').style.display='none'" style="width:100%; margin-top:10px;">Kapat</button>
+  </div>
+</div>
+
+<!-- Çalışma Saatleri Modal -->
+<div id="saatModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+  <div style="background:var(--bg); padding:20px; border-radius:12px; width:90%; max-width:420px; border:2px solid var(--dark-border);">
+    <h3>⏰ Çalışma Saatleri</h3>
+    <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Halı sahanızın aktif hizmet verdiği seans saatlerini seçin. Seçilmeyen saatler tamamen gizlenir.</p>
+    
+    <div id="saatCheckboxes" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; max-height:250px; overflow-y:auto; margin-bottom:20px; padding:10px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid var(--dark-border);">
+      <!-- Checkbox list of all possible hours (08:00 - 03:00) -->
+    </div>
+
+    <button id="saveSaatBtn" class="btn btn-primary" style="width:100%; margin-bottom:10px;">Çalışma Saatlerini Kaydet</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('saatModal').style.display='none'" style="width:100%;">Kapat</button>
   </div>
 </div>
 
@@ -183,10 +199,23 @@ if (urlTime) highlightTime = urlTime;
 
 dateSelect.value = currentTarih;
 
+function applyActiveHours(saha) {
+  if (saha && saha.aktif_saatler) {
+    SAATLER.length = 0;
+    saha.aktif_saatler.split(',').forEach(s => SAATLER.push(s));
+    SAATLER.sort((a,b) => TUM_SAATLER.indexOf(a) - TUM_SAATLER.indexOf(b));
+  } else {
+    SAATLER.length = 0;
+    ['18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00'].forEach(s => SAATLER.push(s));
+  }
+}
+
 async function doLogin(code) {
   const saha = await getSahaByAccessCode(code);
   if (saha) {
     currentSaha = saha;
+    applyActiveHours(saha);
+    
     loginWrapper.style.display = 'none';
     adminWrapper.classList.add('visible');
     logoutBtn.style.display = 'flex';
@@ -195,6 +224,7 @@ async function doLogin(code) {
     
     initAboneModal();
     initFiyatModal();
+    initSaatModal();
     await renderSlots();
     
     if (highlightTime) {
@@ -302,10 +332,14 @@ function showToast(msg) {
 // --- Abonelik Modal Mantığı ---
 const GUN_ISIMLERI = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
 
+let isFiyatModalInit = false;
 function initFiyatModal() {
   const saatSel = document.getElementById('ozelFiyatSaat');
   saatSel.innerHTML = '';
   SAATLER.forEach(s => saatSel.add(new Option(s, s)));
+  
+  if (isFiyatModalInit) return;
+  isFiyatModalInit = true;
   
   document.getElementById('fiyatModalBtn').addEventListener('click', () => {
     document.getElementById('fiyatModal').style.display = 'flex';
@@ -353,10 +387,14 @@ async function renderOzelFiyatlar() {
   });
 }
 
+let isAboneModalInit = false;
 function initAboneModal() {
   const saatSel = document.getElementById('aboneSaat');
   saatSel.innerHTML = '';
   SAATLER.forEach(s => saatSel.add(new Option(s, s)));
+  
+  if (isAboneModalInit) return;
+  isAboneModalInit = true;
   
   document.getElementById('aboneModalBtn').addEventListener('click', () => {
     document.getElementById('aboneModal').style.display = 'flex';
@@ -395,7 +433,67 @@ async function renderAbonelikler() {
       await renderAbonelikler();
       await renderSlots();
     });
-    list.appendChild(item);
+  });
+}
+
+function initSaatModal() {
+  document.getElementById('saatModalBtn').addEventListener('click', () => {
+    const container = document.getElementById('saatCheckboxes');
+    container.innerHTML = '';
+    
+    const activeHours = currentSaha.aktif_saatler ? currentSaha.aktif_saatler.split(',') : ['18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00'];
+    
+    TUM_SAATLER.forEach(s => {
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; font-weight:600; padding:4px 0;';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = s;
+      checkbox.checked = activeHours.includes(s);
+      
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(s));
+      container.appendChild(label);
+    });
+    
+    document.getElementById('saatModal').style.display = 'flex';
+  });
+
+  document.getElementById('saveSaatBtn').addEventListener('click', async () => {
+    const checkboxes = document.querySelectorAll('#saatCheckboxes input[type="checkbox"]');
+    const selected = [];
+    checkboxes.forEach(c => {
+      if (c.checked) selected.push(c.value);
+    });
+    
+    if (selected.length === 0) {
+      return alert('Lütfen en az bir çalışma saati seçiniz.');
+    }
+    
+    // Sort logically based on TUM_SAATLER order
+    selected.sort((a,b) => TUM_SAATLER.indexOf(a) - TUM_SAATLER.indexOf(b));
+    const activeString = selected.join(',');
+    
+    currentSaha.aktif_saatler = activeString;
+    
+    const { error } = await sb.from('sahalar').update({
+      aktif_saatler: activeString
+    }).eq('id', currentSaha.id);
+    
+    if (error) {
+      alert("Hata: " + error.message);
+    } else {
+      document.getElementById('saatModal').style.display = 'none';
+      applyActiveHours(currentSaha);
+      
+      // Re-populate hour dropdowns
+      initFiyatModal();
+      initAboneModal();
+      
+      await renderSlots();
+      showToast('Çalışma Saatleri Güncellendi');
+    }
   });
 }
 </script>

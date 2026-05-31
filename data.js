@@ -8,6 +8,10 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 // İsim çakışmasını önlemek için 'sb' adını kullanıyoruz
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const TUM_SAATLER = [
+  '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00', '01:00', '02:00', '03:00'
+];
+
 const SAATLER = [
   '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00'
 ];
@@ -129,8 +133,11 @@ async function getSlots(sahaId, tarih) {
     .eq('saha_id', sahaId)
     .eq('tarih', tarih);
 
+  const activeHours = (saha.aktif_saatler ? saha.aktif_saatler.split(',') : SAATLER)
+    .sort((a,b) => TUM_SAATLER.indexOf(a) - TUM_SAATLER.indexOf(b));
+
   const result = {};
-  SAATLER.forEach(s => {
+  activeHours.forEach(s => {
     const dbSlot = data?.find(d => d.saat === s);
     const isAbone = aboneSaatler.includes(s);
     

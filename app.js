@@ -33,6 +33,7 @@ async function init() {
     content.innerHTML = '<div class="loading"><div class="spinner"></div> Saha bilgileri yükleniyor...</div>';
     currentSahaData = await getSahaById(selectedSahaId);
     if (currentSahaData) {
+      applyActiveHours(currentSahaData);
       renderContent();
     } else {
       content.innerHTML = '<div class="empty-state">❌ Saha bulunamadı veya silinmiş.</div>';
@@ -68,11 +69,25 @@ async function onSehirChange() {
   sahaSel.disabled = false;
 }
 
+function applyActiveHours(saha) {
+  if (saha && saha.aktif_saatler) {
+    SAATLER.length = 0;
+    saha.aktif_saatler.split(',').forEach(s => SAATLER.push(s));
+    SAATLER.sort((a,b) => TUM_SAATLER.indexOf(a) - TUM_SAATLER.indexOf(b));
+  } else {
+    SAATLER.length = 0;
+    ['18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00'].forEach(s => SAATLER.push(s));
+  }
+}
+
 async function onSahaChange() {
   selectedSahaId = sahaSel.value || null;
   if (selectedSahaId) {
     currentSahaData = await getSahaById(selectedSahaId);
-    if (currentSahaData) renderContent();
+    if (currentSahaData) {
+      applyActiveHours(currentSahaData);
+      renderContent();
+    }
   } else {
     content.innerHTML = `
       <div class="empty-state">
