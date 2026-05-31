@@ -79,8 +79,23 @@ async function renderContent() {
   infoBar.className = 'saha-info anim-in';
   
   const imgSrc = currentSahaData.gorsel || 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80';
-  const query = currentSahaData.harita || currentSahaData.adres || (currentSahaData.ad + ' ' + currentSahaData.ilce);
-  const mapsIframe = `<iframe width="100%" height="250" style="border:0; border-radius:12px; margin-top:15px; display:none;" id="mapIframe" loading="lazy" allowfullscreen src="https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=14&ie=UTF8&iwloc=&output=embed"></iframe>`;
+  let embedSrc = '';
+  const rawHarita = currentSahaData.harita;
+  
+  if (rawHarita && rawHarita.includes('<iframe')) {
+    // Admin Google Maps "Harita Yerleştir" iframe kodunu yapıştırmış
+    const match = rawHarita.match(/src="([^"]+)"/);
+    if (match && match[1]) embedSrc = match[1];
+  } else if (rawHarita && rawHarita.startsWith('http') && (rawHarita.includes('embed') || rawHarita.includes('output='))) {
+    // Admin direkt embed linkini yapıştırmış
+    embedSrc = rawHarita;
+  } else {
+    // Sadece yer adı veya adres girilmişse, otomatik query yap
+    const query = rawHarita || currentSahaData.adres || (currentSahaData.ad + ' ' + currentSahaData.ilce);
+    embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
+  }
+
+  const mapsIframe = `<iframe width="100%" height="250" style="border:0; border-radius:12px; margin-top:15px; display:none;" id="mapIframe" loading="lazy" allowfullscreen src="${embedSrc}"></iframe>`;
 
   infoBar.innerHTML = `
     <div style="display:flex; justify-content:space-between; width:100%; gap:15px; align-items:flex-start;">
