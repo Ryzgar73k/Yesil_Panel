@@ -97,7 +97,16 @@ async function renderContent() {
   const infoBar = document.createElement('div');
   infoBar.className = 'saha-info anim-in';
   
-  const imgSrc = currentSahaData.gorsel || 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80';
+  let imgSrc = currentSahaData.gorsel;
+  if (imgSrc) {
+    if (!imgSrc.startsWith('http://') && !imgSrc.startsWith('https://')) {
+      if (!imgSrc.startsWith('/') && !imgSrc.startsWith('images/')) {
+        imgSrc = 'images/' + imgSrc;
+      }
+    }
+  } else {
+    imgSrc = 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80';
+  }
   let embedSrc = '';
   const rawHarita = currentSahaData.harita;
   
