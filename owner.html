@@ -90,6 +90,15 @@
         <button class="btn btn-ghost" id="aboneModalBtn" style="border:1px solid var(--dark-border);">⭐ Abonelikleri Yönet</button>
       </div>
     </div>
+    
+    <div style="background: rgba(255,255,255,0.05); border: 1px solid var(--dark-border); border-radius: 8px; padding: 10px 15px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+      <div>
+        <span style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">🔗 Müşteriye Özel Paylaşım Linkiniz</span>
+        <input type="text" id="shareLinkInput" readonly style="background: transparent; border: none; color: var(--text-light); font-weight: 600; width: 300px; outline: none; padding:0;" />
+      </div>
+      <button class="btn btn-ghost" onclick="navigator.clipboard.writeText(document.getElementById('shareLinkInput').value); alert('Link kopyalandı!')" style="padding: 6px 12px; border: 1px solid var(--dark-border); height:auto; margin:0;">Kopyala</button>
+    </div>
+
     <div id="slotGrid" class="owner-slot-grid"></div>
     <div class="slot-save-bar">
       <p>Değişiklikler anında kaydedilir ve sitede görünür.</p>
@@ -182,6 +191,8 @@ async function doLogin(code) {
     adminWrapper.classList.add('visible');
     logoutBtn.style.display = 'flex';
     document.getElementById('sahaName').textContent = '🏟️ ' + saha.ad;
+    document.getElementById('shareLinkInput').value = `${window.location.origin}/index.html?sahaId=${saha.id}`;
+    
     initAboneModal();
     initFiyatModal();
     await renderSlots();

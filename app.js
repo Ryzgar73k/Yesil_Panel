@@ -19,6 +19,21 @@ async function init() {
   await populateSehirler();
   sehirSel.addEventListener('change', onSehirChange);
   sahaSel.addEventListener('change', onSahaChange);
+
+  // Özel Müşteri Paylaşım Linki Kontrolü
+  const params = new URLSearchParams(window.location.search);
+  const directSahaId = params.get('sahaId');
+  if (directSahaId) {
+    document.querySelector('.search-section').style.display = 'none'; // Arama kutularını gizle
+    selectedSahaId = directSahaId;
+    content.innerHTML = '<div class="loading"><div class="spinner"></div> Saha bilgileri yükleniyor...</div>';
+    currentSahaData = await getSahaById(selectedSahaId);
+    if (currentSahaData) {
+      renderContent();
+    } else {
+      content.innerHTML = '<div class="empty-state">❌ Saha bulunamadı veya silinmiş.</div>';
+    }
+  }
 }
 
 async function populateSehirler() {
@@ -158,6 +173,37 @@ function buildDateStrip() {
     });
     strip.appendChild(chip);
   }
+
+  // 1 Haftadan sonrası için takvim butonu (Max 10 gün)
+  const dpWrapper = document.createElement('div');
+  dpWrapper.style.cssText = 'position:relative; display:flex; align-items:center;';
+  
+  const dpIcon = document.createElement('button');
+  dpIcon.className = 'date-btn';
+  dpIcon.innerHTML = '📅 Seç';
+  dpIcon.style.cssText = 'padding:0 15px; background:rgba(57,211,83,0.1); border-color:#39D353; color:#39D353; font-weight:bold; height:100%; display:flex; align-items:center; gap:5px;';
+  
+  const dpInput = document.createElement('input');
+  dpInput.type = 'date';
+  dpInput.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;';
+  
+  const minD = new Date(today);
+  dpInput.min = minD.toISOString().split('T')[0];
+  const maxD = new Date(today);
+  maxD.setDate(today.getDate() + 10);
+  dpInput.max = maxD.toISOString().split('T')[0];
+
+  dpInput.addEventListener('change', (e) => {
+    if(e.target.value) {
+      selectedTarih = e.target.value;
+      renderContent();
+    }
+  });
+
+  dpWrapper.appendChild(dpIcon);
+  dpWrapper.appendChild(dpInput);
+  strip.appendChild(dpWrapper);
+
   return strip;
 }
 
