@@ -116,15 +116,17 @@ async function getSlots(sahaId, tarih) {
     // Abone her zaman doludur.
     let durum = isAbone ? 'abone' : 'bos';
     if (dbSlot) {
-       // Veritabanında o güne özel bir kayıt varsa onu baz al (abone olsa bile belki işletmeci o haftalık iptal etti)
-       // Fakat genel kural: Abone ise dolu/abone yazarız.
        durum = (isAbone && dbSlot.durum !== 'bos') ? 'abone' : dbSlot.durum;
-       // Eğer slot veritabanında 'bos' ise, abone olsa dahi boşa çıkar. Bu işletmeciye esneklik sağlar.
+    }
+
+    let defaultPrice = saha.default_fiyat;
+    if (saha.gunduz_bitis && saha.gunduz_fiyat && s < saha.gunduz_bitis) {
+      defaultPrice = saha.gunduz_fiyat;
     }
 
     result[s] = {
       durum: durum,
-      fiyat: dbSlot && dbSlot.fiyat ? dbSlot.fiyat : saha.default_fiyat
+      fiyat: dbSlot && dbSlot.fiyat ? dbSlot.fiyat : defaultPrice
     };
   });
   return result;

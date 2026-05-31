@@ -24,7 +24,7 @@
     .owner-slot.bos { background: rgba(57, 211, 83, 0.1); border-color: #39D353; color: #39D353; }
     .owner-slot.dolu { background: rgba(231, 76, 60, 0.1); border-color: #E74C3C; color: #E74C3C; }
     .owner-slot:hover { transform: scale(1.02); }
-    .owner-slot .time { font-size: 24px; font-weight: 800; display: block; }
+    .owner-slot .time { font-size: 18px; font-weight: 800; display: block; }
     .owner-slot .status { font-size: 12px; font-weight: 700; text-transform: uppercase; }
     .owner-slot.highlight {
       border-color: #39D353;
@@ -85,12 +85,38 @@
         <button class="btn btn-ghost" id="allBosBtn">Tümünü Boş Yap</button>
         <button class="btn btn-danger" id="allDoluBtn">Tümünü Dolu Yap</button>
       </div>
-      <button class="btn btn-ghost" id="aboneModalBtn" style="border:1px solid var(--dark-border);">⭐ Abonelikleri Yönet</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-ghost" id="fiyatModalBtn" style="border:1px solid var(--dark-border);">💰 Fiyatlandırma</button>
+        <button class="btn btn-ghost" id="aboneModalBtn" style="border:1px solid var(--dark-border);">⭐ Abonelikleri Yönet</button>
+      </div>
     </div>
     <div id="slotGrid" class="owner-slot-grid"></div>
     <div class="slot-save-bar">
       <p>Değişiklikler anında kaydedilir ve sitede görünür.</p>
     </div>
+  </div>
+</div>
+
+<!-- Fiyatlandırma Modal -->
+<div id="fiyatModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+  <div style="background:var(--bg); padding:20px; border-radius:12px; width:90%; max-width:400px; border:2px solid var(--dark-border);">
+    <h3>💰 Gündüz / İndirimli Tarife</h3>
+    <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Seçtiğiniz saate kadar (gündüz) olan seanslar için farklı bir fiyat belirleyebilirsiniz.</p>
+    
+    <div class="form-group">
+      <label class="form-label">Hangi saate KADAR indirimli olsun?</label>
+      <select id="gunduzBitis" class="input-field">
+        <option value="">İndirim Yok (Tek Fiyat)</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">İndirimli (Gündüz) Fiyat (₺)</label>
+      <input type="number" id="gunduzFiyat" class="input-field" placeholder="Örn: 300" />
+    </div>
+    
+    <button id="saveFiyatBtn" class="btn btn-primary" style="width:100%; margin-bottom:10px;">Kaydet</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('fiyatModal').style.display='none'" style="width:100%;">Kapat</button>
   </div>
 </div>
 
@@ -159,6 +185,7 @@ async function doLogin(code) {
     logoutBtn.style.display = 'flex';
     document.getElementById('sahaName').textContent = '🏟️ ' + saha.ad;
     initAboneModal();
+    initFiyatModal();
     await renderSlots();
     
     if (highlightTime) {
@@ -205,8 +232,9 @@ async function renderSlots() {
     card.dataset.time = saat;
     if (saat === highlightTime) card.classList.add('highlight');
 
+    const enSaat = incrementHour(saat);
     card.innerHTML = `
-      <span class="time">${saat}</span>
+      <span class="time">${saat} - ${enSaat}</span>
       <span class="status">${slot.durum === 'abone' ? 'ABONE' : (slot.durum === 'bos' ? 'MÜSAİT' : 'DOLU')}</span>
     `;
     card.addEventListener('click', async () => {
@@ -224,7 +252,15 @@ async function renderSlots() {
         }
       }
 
-      await setSlot(currentSaha.id, currentTarih, saat, yeniDurum, currentSaha.default_fiyat);
+      // Fiyat hesaplama
+      let uygulanacakFiyat = currentSaha.default_fiyat;
+      if (currentSaha.gunduz_bitis && currentSaha.gunduz_fiyat) {
+        if (saat < currentSaha.gunduz_bitis) {
+          uygulanacakFiyat = currentSaha.gunduz_fiyat;
+        }
+      }
+
+      await setSlot(currentSaha.id, currentTarih, saat, yeniDurum, uygulanacakFiyat);
       if (saat === highlightTime) highlightTime = null;
       await renderSlots();
       showToast('Güncellendi');
@@ -233,12 +269,22 @@ async function renderSlots() {
   });
 }
 
+function incrementHour(time) {
+  const [h] = time.split(':').map(Number);
+  const next = (h + 1) % 24;
+  return `${String(next).padStart(2, '0')}:00`;
+}
+
 document.getElementById('allBosBtn').addEventListener('click', () => bulkUpdate('bos'));
 document.getElementById('allDoluBtn').addEventListener('click', () => bulkUpdate('dolu'));
 
 async function bulkUpdate(durum) {
   for (const saat of SAATLER) {
-    await setSlot(currentSaha.id, currentTarih, saat, durum, currentSaha.default_fiyat);
+    let uygulanacakFiyat = currentSaha.default_fiyat;
+    if (currentSaha.gunduz_bitis && currentSaha.gunduz_fiyat) {
+      if (saat < currentSaha.gunduz_bitis) uygulanacakFiyat = currentSaha.gunduz_fiyat;
+    }
+    await setSlot(currentSaha.id, currentTarih, saat, durum, uygulanacakFiyat);
   }
   await renderSlots();
   showToast('Tümü Güncellendi');
@@ -252,6 +298,41 @@ function showToast(msg) {
 
 // --- Abonelik Modal Mantığı ---
 const GUN_ISIMLERI = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+
+function initFiyatModal() {
+  const bitisSel = document.getElementById('gunduzBitis');
+  // clear options except first
+  while(bitisSel.options.length > 1) bitisSel.remove(1);
+  SAATLER.forEach(s => bitisSel.add(new Option(s + ' ve öncesi', s)));
+  
+  document.getElementById('fiyatModalBtn').addEventListener('click', () => {
+    document.getElementById('gunduzBitis').value = currentSaha.gunduz_bitis || '';
+    document.getElementById('gunduzFiyat').value = currentSaha.gunduz_fiyat || '';
+    document.getElementById('fiyatModal').style.display = 'flex';
+  });
+
+  document.getElementById('saveFiyatBtn').addEventListener('click', async () => {
+    const bitis = document.getElementById('gunduzBitis').value;
+    const fiyat = parseInt(document.getElementById('gunduzFiyat').value) || 0;
+    
+    // Update local data and server
+    currentSaha.gunduz_bitis = bitis;
+    currentSaha.gunduz_fiyat = fiyat;
+    
+    // We can use the existing updateSaha from data.js, wait it needs to be imported or we can just make a direct sb call here since we are in owner panel and we only want to update pricing
+    const { error } = await sb.from('sahalar').update({
+      gunduz_bitis: bitis,
+      gunduz_fiyat: fiyat
+    }).eq('id', currentSaha.id);
+    
+    if (error) {
+      alert("Hata: " + error.message);
+    } else {
+      document.getElementById('fiyatModal').style.display = 'none';
+      showToast('Fiyatlandırma Güncellendi');
+    }
+  });
+}
 
 function initAboneModal() {
   const saatSel = document.getElementById('aboneSaat');

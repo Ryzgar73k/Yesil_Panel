@@ -188,8 +188,8 @@ function renderSlots(slots) {
 
     const enSaat = incrementHour(saat);
     card.innerHTML = `
-      <div class="slot-time">${saat}</div>
-      <div class="slot-duration">1 Saatlik Kiralama · ${enSaat}'e kadar</div>
+      <div class="slot-time" style="font-size:18px;">${saat} - ${enSaat}</div>
+      <div class="slot-duration">1 Saatlik Kiralama</div>
       <div class="slot-price">${slot.fiyat.toLocaleString('tr-TR')} ₺</div>
       <div class="slot-status">
         ${statusHTML}
