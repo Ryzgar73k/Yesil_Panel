@@ -100,23 +100,21 @@
 <!-- Fiyatlandırma Modal -->
 <div id="fiyatModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
   <div style="background:var(--bg); padding:20px; border-radius:12px; width:90%; max-width:400px; border:2px solid var(--dark-border);">
-    <h3>💰 Gündüz / İndirimli Tarife</h3>
-    <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Seçtiğiniz saate kadar (gündüz) olan seanslar için farklı bir fiyat belirleyebilirsiniz.</p>
+    <h3>💰 Özel Fiyatlandırma</h3>
+    <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Seçtiğiniz saate kalıcı olarak farklı bir fiyat belirleyebilirsiniz.</p>
     
-    <div class="form-group">
-      <label class="form-label">Hangi saate KADAR indirimli olsun?</label>
-      <select id="gunduzBitis" class="input-field">
-        <option value="">İndirim Yok (Tek Fiyat)</option>
-      </select>
+    <div style="display:flex; gap:10px; margin-bottom:15px;">
+      <select id="ozelFiyatSaat" class="input-field" style="flex:1;"></select>
+      <input type="number" id="ozelFiyatInput" class="input-field" style="flex:1;" placeholder="Örn: 300 ₺" />
     </div>
     
-    <div class="form-group">
-      <label class="form-label">İndirimli (Gündüz) Fiyat (₺)</label>
-      <input type="number" id="gunduzFiyat" class="input-field" placeholder="Örn: 300" />
-    </div>
+    <button id="saveFiyatBtn" class="btn btn-primary" style="width:100%; margin-bottom:15px;">Fiyatı Ekle</button>
     
-    <button id="saveFiyatBtn" class="btn btn-primary" style="width:100%; margin-bottom:10px;">Kaydet</button>
-    <button class="btn btn-ghost" onclick="document.getElementById('fiyatModal').style.display='none'" style="width:100%;">Kapat</button>
+    <div id="fiyatList" style="max-height:200px; overflow-y:auto; border-top:1px solid var(--dark-border); padding-top:10px;">
+      <!-- List of custom prices -->
+    </div>
+
+    <button class="btn btn-ghost" onclick="document.getElementById('fiyatModal').style.display='none'" style="width:100%; margin-top:10px;">Kapat</button>
   </div>
 </div>
 
@@ -253,14 +251,7 @@ async function renderSlots() {
       }
 
       // Fiyat hesaplama
-      let uygulanacakFiyat = currentSaha.default_fiyat;
-      if (currentSaha.gunduz_bitis && currentSaha.gunduz_fiyat) {
-        if (saat < currentSaha.gunduz_bitis) {
-          uygulanacakFiyat = currentSaha.gunduz_fiyat;
-        }
-      }
-
-      await setSlot(currentSaha.id, currentTarih, saat, yeniDurum, uygulanacakFiyat);
+      await setSlot(currentSaha.id, currentTarih, saat, yeniDurum, slot.fiyat);
       if (saat === highlightTime) highlightTime = null;
       await renderSlots();
       showToast('Güncellendi');
@@ -279,11 +270,12 @@ document.getElementById('allBosBtn').addEventListener('click', () => bulkUpdate(
 document.getElementById('allDoluBtn').addEventListener('click', () => bulkUpdate('dolu'));
 
 async function bulkUpdate(durum) {
+  const ozelFiyatlar = await getOzelFiyatlar(currentSaha.id);
+  const fiyatMap = {};
+  ozelFiyatlar.forEach(f => fiyatMap[f.saat] = f.fiyat);
+
   for (const saat of SAATLER) {
-    let uygulanacakFiyat = currentSaha.default_fiyat;
-    if (currentSaha.gunduz_bitis && currentSaha.gunduz_fiyat) {
-      if (saat < currentSaha.gunduz_bitis) uygulanacakFiyat = currentSaha.gunduz_fiyat;
-    }
+    const uygulanacakFiyat = fiyatMap[saat] !== undefined ? fiyatMap[saat] : currentSaha.default_fiyat;
     await setSlot(currentSaha.id, currentTarih, saat, durum, uygulanacakFiyat);
   }
   await renderSlots();
@@ -300,37 +292,53 @@ function showToast(msg) {
 const GUN_ISIMLERI = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
 
 function initFiyatModal() {
-  const bitisSel = document.getElementById('gunduzBitis');
-  // clear options except first
-  while(bitisSel.options.length > 1) bitisSel.remove(1);
-  SAATLER.forEach(s => bitisSel.add(new Option(s + ' ve öncesi', s)));
+  const saatSel = document.getElementById('ozelFiyatSaat');
+  saatSel.innerHTML = '';
+  SAATLER.forEach(s => saatSel.add(new Option(s, s)));
   
   document.getElementById('fiyatModalBtn').addEventListener('click', () => {
-    document.getElementById('gunduzBitis').value = currentSaha.gunduz_bitis || '';
-    document.getElementById('gunduzFiyat').value = currentSaha.gunduz_fiyat || '';
     document.getElementById('fiyatModal').style.display = 'flex';
+    renderOzelFiyatlar();
   });
 
   document.getElementById('saveFiyatBtn').addEventListener('click', async () => {
-    const bitis = document.getElementById('gunduzBitis').value;
-    const fiyat = parseInt(document.getElementById('gunduzFiyat').value) || 0;
+    const saat = document.getElementById('ozelFiyatSaat').value;
+    const fiyat = parseInt(document.getElementById('ozelFiyatInput').value);
     
-    // Update local data and server
-    currentSaha.gunduz_bitis = bitis;
-    currentSaha.gunduz_fiyat = fiyat;
+    if (!fiyat) return alert('Lütfen geçerli bir fiyat girin.');
     
-    // We can use the existing updateSaha from data.js, wait it needs to be imported or we can just make a direct sb call here since we are in owner panel and we only want to update pricing
-    const { error } = await sb.from('sahalar').update({
-      gunduz_bitis: bitis,
-      gunduz_fiyat: fiyat
-    }).eq('id', currentSaha.id);
-    
-    if (error) {
-      alert("Hata: " + error.message);
-    } else {
-      document.getElementById('fiyatModal').style.display = 'none';
-      showToast('Fiyatlandırma Güncellendi');
-    }
+    await setOzelFiyat(currentSaha.id, saat, fiyat, false);
+    document.getElementById('ozelFiyatInput').value = '';
+    await renderOzelFiyatlar();
+    await renderSlots();
+    showToast('Fiyat Eklendi');
+  });
+}
+
+async function renderOzelFiyatlar() {
+  const list = document.getElementById('fiyatList');
+  list.innerHTML = 'Yükleniyor...';
+  const fiyatlar = await getOzelFiyatlar(currentSaha.id);
+  
+  if (fiyatlar.length === 0) {
+    list.innerHTML = '<div style="font-size:12px; color:var(--text-muted); text-align:center;">Henüz özel fiyat yok. (Tümü: ' + currentSaha.default_fiyat + ' ₺)</div>';
+    return;
+  }
+  
+  list.innerHTML = '';
+  fiyatlar.sort((a,b) => a.saat.localeCompare(b.saat)).forEach(f => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px; background:rgba(255,255,255,0.05); margin-bottom:5px; border-radius:6px;';
+    item.innerHTML = `
+      <span style="font-size:14px; font-weight:600;">${f.saat} — ${f.fiyat} ₺</span>
+      <button class="btn btn-danger btn-sm" style="padding:4px 8px;">Sil</button>
+    `;
+    item.querySelector('button').addEventListener('click', async () => {
+      await setOzelFiyat(currentSaha.id, f.saat, null, true);
+      await renderOzelFiyatlar();
+      await renderSlots();
+    });
+    list.appendChild(item);
   });
 }
 

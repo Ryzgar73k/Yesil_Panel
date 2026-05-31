@@ -42,6 +42,7 @@ function buildWALink(wp, sahaAd, tarih, saat, fiyat, accessCode) {
 // --- Animasyon Fonksiyonu ---
 window.showTransition = function (url) {
   const overlay = document.createElement('div');
+  overlay.id = 'transition-overlay-id';
   overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#1A1E1C;z-index:9999;display:flex;justify-content:center;align-items:center;opacity:0;transition:opacity 0.3s ease;';
   overlay.innerHTML = '<div style="font-size:80px; animation:spin-bounce 0.8s infinite ease-in-out;">⚽</div><style>@keyframes spin-bounce { 0% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-30px) rotate(180deg); } 100% { transform: translateY(0) rotate(360deg); } }</style>';
   document.body.appendChild(overlay);
@@ -54,6 +55,14 @@ window.showTransition = function (url) {
     window.location.href = url;
   }, 400);
 };
+
+// Tarayıcı geri tuşuna basıldığında animasyonun takılı kalmasını (bfcache sorunu) çözer
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    const overlay = document.getElementById('transition-overlay-id');
+    if (overlay) overlay.remove();
+  }
+});
 
 // --- Veri Fonksiyonları (ASYNC) ---
 
@@ -101,6 +110,19 @@ async function getSlots(sahaId, tarih) {
   
   const aboneSaatler = aboneData ? aboneData.map(a => a.saat) : [];
 
+  // Özel fiyatları çek
+  const { data: fiyatData } = await sb
+    .from('ozel_fiyatlar')
+    .select('saat, fiyat')
+    .eq('saha_id', sahaId);
+  
+  const ozelFiyatMap = {};
+  if (fiyatData) {
+    fiyatData.forEach(f => {
+      ozelFiyatMap[f.saat] = f.fiyat;
+    });
+  }
+
   const { data, error } = await sb
     .from('slots')
     .select('*')
@@ -119,10 +141,7 @@ async function getSlots(sahaId, tarih) {
        durum = (isAbone && dbSlot.durum !== 'bos') ? 'abone' : dbSlot.durum;
     }
 
-    let defaultPrice = saha.default_fiyat;
-    if (saha.gunduz_bitis && saha.gunduz_fiyat && s < saha.gunduz_bitis) {
-      defaultPrice = saha.gunduz_fiyat;
-    }
+    let defaultPrice = ozelFiyatMap[s] !== undefined ? ozelFiyatMap[s] : saha.default_fiyat;
 
     result[s] = {
       durum: durum,
@@ -130,6 +149,21 @@ async function getSlots(sahaId, tarih) {
     };
   });
   return result;
+}
+
+// --- Özel Fiyat API ---
+async function getOzelFiyatlar(sahaId) {
+  const { data, error } = await sb.from('ozel_fiyatlar').select('*').eq('saha_id', sahaId);
+  return error ? [] : data;
+}
+
+async function setOzelFiyat(sahaId, saat, fiyat, isDeleting = false) {
+  if (isDeleting) {
+    await sb.from('ozel_fiyatlar').delete().match({ saha_id: sahaId, saat });
+  } else {
+    // Upsert (eğer varsa günceller, yoksa ekler)
+    await sb.from('ozel_fiyatlar').upsert({ saha_id: sahaId, saat, fiyat }, { onConflict: 'saha_id, saat' });
+  }
 }
 
 // --- Abonelik API ---
