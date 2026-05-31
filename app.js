@@ -24,7 +24,11 @@ async function init() {
   const params = new URLSearchParams(window.location.search);
   const directSahaId = params.get('sahaId');
   if (directSahaId) {
-    document.querySelector('.search-section').style.display = 'none'; // Arama kutularını gizle
+    const selectorCard = document.querySelector('.selector-card');
+    if (selectorCard) selectorCard.style.display = 'none'; // Arama kutularını gizle
+    const heroSec = document.querySelector('.hero');
+    if (heroSec) heroSec.style.display = 'none'; // Hero kısmını gizle (daha kompakt görünüm)
+    
     selectedSahaId = directSahaId;
     content.innerHTML = '<div class="loading"><div class="spinner"></div> Saha bilgileri yükleniyor...</div>';
     currentSahaData = await getSahaById(selectedSahaId);
@@ -176,16 +180,39 @@ function buildDateStrip() {
 
   // 1 Haftadan sonrası için takvim butonu (Max 10 gün)
   const dpWrapper = document.createElement('div');
-  dpWrapper.style.cssText = 'position:relative; display:flex; align-items:center;';
+  dpWrapper.style.cssText = 'position:relative; display:flex; align-items:center; flex-shrink:0;';
   
-  const dpIcon = document.createElement('button');
-  dpIcon.className = 'date-btn';
-  dpIcon.innerHTML = '📅 Seç';
-  dpIcon.style.cssText = 'padding:0 15px; background:rgba(57,211,83,0.1); border-color:#39D353; color:#39D353; font-weight:bold; height:100%; display:flex; align-items:center; gap:5px;';
+  // İlk 7 günden birisi mi seçili kontrolü
+  const first7Dates = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    first7Dates.push(formatISOLocal(d));
+  }
+  const isSelectedCustom = !first7Dates.includes(selectedTarih);
+
+  const dpIcon = document.createElement('div');
+  dpIcon.className = 'date-chip' + (isSelectedCustom ? ' active' : '');
+  dpIcon.style.cssText = 'min-width: 64px; justify-content: center;';
   
+  if (isSelectedCustom) {
+    const [y, m, d] = selectedTarih.split('-');
+    dpIcon.innerHTML = `
+      <span class="day-name" style="color: var(--green-200);">Seçildi</span>
+      <span class="day-num" style="font-size:18px; margin: 2px 0;">${d}.${m}</span>
+      <span class="month-name" style="color: var(--green-200);">📅 Değiştir</span>
+    `;
+  } else {
+    dpIcon.innerHTML = `
+      <span class="day-name">Diğer</span>
+      <span class="day-num" style="font-size:20px; margin: 2px 0;">📅</span>
+      <span class="month-name">Tarih Seç</span>
+    `;
+  }
+
   const dpInput = document.createElement('input');
   dpInput.type = 'date';
-  dpInput.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;';
+  dpInput.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; z-index:10;';
   
   const minD = new Date(today);
   dpInput.min = minD.toISOString().split('T')[0];
@@ -197,6 +224,14 @@ function buildDateStrip() {
     if(e.target.value) {
       selectedTarih = e.target.value;
       renderContent();
+    }
+  });
+
+  dpIcon.addEventListener('click', () => {
+    try {
+      dpInput.showPicker();
+    } catch(e) {
+      dpInput.click();
     }
   });
 
