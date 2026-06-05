@@ -88,7 +88,8 @@
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn btn-ghost" id="saatModalBtn" style="border:1px solid var(--dark-border);">⏰ Çalışma Saatleri</button>
         <button class="btn btn-ghost" id="fiyatModalBtn" style="border:1px solid var(--dark-border);">💰 Fiyatlandırma</button>
-        <button class="btn btn-ghost" id="aboneModalBtn" style="border:1px solid var(--dark-border);">⭐ Abonelikleri Yönet</button>
+        <button class="btn btn-ghost" id="aboneYonetimModalBtn" style="border:1px solid var(--dark-border);">👤 Abone & Bakiye Yönetimi</button>
+        <button class="btn btn-ghost" id="aboneModalBtn" style="border:1px solid var(--dark-border);">⭐ Haftalık Abonelikler</button>
       </div>
     </div>
     
@@ -143,23 +144,31 @@
   </div>
 </div>
 
-<!-- Abonelik Modal -->
+<!-- Abonelik Modal (Haftalık) -->
 <div id="aboneModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
   <div style="background:var(--bg); padding:20px; border-radius:12px; width:90%; max-width:400px; border:2px solid var(--dark-border);">
-    <h3>⭐ Abonelik Yönetimi</h3>
+    <h3>⭐ Haftalık Abonelikler</h3>
     <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Seçilen gün ve saat her hafta otomatik olarak "ABONE" gözükecektir.</p>
     
-    <div style="display:flex; gap:10px; margin-bottom:15px;">
-      <select id="aboneGun" class="input-field" style="flex:1;">
-        <option value="1">Pazartesi</option>
-        <option value="2">Salı</option>
-        <option value="3">Çarşamba</option>
-        <option value="4">Perşembe</option>
-        <option value="5">Cuma</option>
-        <option value="6">Cumartesi</option>
-        <option value="0">Pazar</option>
-      </select>
-      <select id="aboneSaat" class="input-field" style="flex:1;"></select>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;">
+      <div style="display:flex; gap:10px;">
+        <select id="aboneGun" class="input-field" style="flex:1;">
+          <option value="1">Pazartesi</option>
+          <option value="2">Salı</option>
+          <option value="3">Çarşamba</option>
+          <option value="4">Perşembe</option>
+          <option value="5">Cuma</option>
+          <option value="6">Cumartesi</option>
+          <option value="0">Pazar</option>
+        </select>
+        <select id="aboneSaat" class="input-field" style="flex:1;"></select>
+      </div>
+      <div>
+        <label class="form-label" style="font-size:11px; margin-bottom:4px; display:block;">👤 Abone Seçin (İsteğe Bağlı)</label>
+        <select id="aboneProfileSelect" class="input-field" style="width:100%;">
+          <option value="">-- Seçiniz --</option>
+        </select>
+      </div>
     </div>
     
     <button id="addAboneBtn" class="btn btn-primary" style="width:100%; margin-bottom:15px;">Abonelik Ekle</button>
@@ -169,6 +178,37 @@
     </div>
     
     <button class="btn btn-ghost" onclick="document.getElementById('aboneModal').style.display='none'" style="width:100%; margin-top:10px;">Kapat</button>
+  </div>
+</div>
+
+<!-- Abone Yönetim Modal -->
+<div id="aboneYonetimModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+  <div style="background:var(--bg); padding:20px; border-radius:12px; width:90%; max-width:500px; border:2px solid var(--dark-border); display:flex; flex-direction:column; max-height:85vh;">
+    <h3 style="margin-top:0;">👤 Abone Bakiye Yönetimi</h3>
+    <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Abonelerinizi listeleyin, yeni abone ekleyin ve bakiyelerini yönetin.</p>
+    
+    <!-- Yeni Abone Ekleme Formu -->
+    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--dark-border); padding:12px; border-radius:8px; margin-bottom:15px;">
+      <h4 style="margin:0 0 10px 0; font-size:14px; color:var(--text-light);">➕ Yeni Abone Ekle</h4>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="newAboneIsim" class="input-field" placeholder="Ad Soyad" style="flex:1;" />
+          <input type="text" id="newAboneTelefon" class="input-field" placeholder="Telefon (905...)" style="flex:1;" />
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="number" id="newAboneBakiye" class="input-field" placeholder="Başlangıç Bakiyesi (₺)" style="flex:1;" />
+          <button id="addAboneProfileBtn" class="btn btn-primary" style="margin:0; height:38px; padding:0 20px;">Ekle</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Abone Listesi -->
+    <h4 style="margin:0 0 10px 0; font-size:14px; color:var(--text-light);">📋 Kayıtlı Aboneler</h4>
+    <div id="aboneProfileList" style="flex:1; overflow-y:auto; min-height:150px; border:1px solid var(--dark-border); border-radius:8px; padding:10px; background:rgba(0,0,0,0.2);">
+      <!-- Aboneler buraya yüklenecek -->
+    </div>
+    
+    <button class="btn btn-ghost" onclick="document.getElementById('aboneYonetimModal').style.display='none'" style="width:100%; margin-top:15px;">Kapat</button>
   </div>
 </div>
 
@@ -223,6 +263,7 @@ async function doLogin(code) {
     document.getElementById('shareLinkInput').value = `${window.location.origin}/index.html?sahaId=${saha.id}`;
     
     initAboneModal();
+    initAboneYonetimModal();
     initFiyatModal();
     initSaatModal();
     await renderSlots();
@@ -272,30 +313,62 @@ async function renderSlots() {
     if (saat === highlightTime) card.classList.add('highlight');
 
     const enSaat = incrementHour(saat);
+    let displayName = '';
+    if (slot.isim) {
+      displayName = `<div style="font-size: 12px; font-weight: 700; color: #fff; margin-top: 6px; padding: 2px 4px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">👤 ${slot.isim}</div>`;
+    }
+
     card.innerHTML = `
       <span class="time">${saat} - ${enSaat}</span>
       <span class="status">${slot.durum === 'abone' ? 'ABONE' : (slot.durum === 'bos' ? 'MÜSAİT' : 'DOLU')}</span>
+      ${displayName}
     `;
     card.addEventListener('click', async () => {
-      // Abone durumundaki saat tıklanınca "boşa" düşer, boş ise dolu olur.
-      const yeniDurum = (slot.durum === 'bos') ? 'dolu' : 'bos';
-      
-      if (yeniDurum === 'bos') {
-        const phones = await getBildirimTalepleri(currentSaha.id, currentTarih, saat);
-        if (phones && phones.length > 0) {
-          if (confirm(`Dikkat! Bu saati bekleyen ${phones.length} kişi var.\nOnlara WhatsApp üzerinden haber vermek ister misiniz?`)) {
-            const msg = encodeURIComponent(`Merhaba, takip ettiğiniz ${currentSaha.ad} sahasındaki ${formatTarih(currentTarih)} ${saat} seansı şu an BOŞALDI. Hemen rezervasyon yapabilirsiniz.`);
-            phones.forEach(p => window.open(`https://wa.me/${p}?text=${msg}`, '_blank'));
-          }
-          await clearBildirimTalepleri(currentSaha.id, currentTarih, saat);
+      if (slot.durum === 'abone') {
+        if (confirm(`Bu seans haftalık bir aboneliğe ait (${slot.isim || 'Abone'}). Sadece bu haftalık bu saati İPTAL edip boş yapmak istiyor musunuz?`)) {
+          await setSlot(currentSaha.id, currentTarih, saat, 'bos', slot.fiyat, null);
+          if (saat === highlightTime) highlightTime = null;
+          await renderSlots();
+          showToast('Bu haftalık iptal edildi');
         }
+        return;
       }
 
-      // Fiyat hesaplama
-      await setSlot(currentSaha.id, currentTarih, saat, yeniDurum, slot.fiyat);
-      if (saat === highlightTime) highlightTime = null;
-      await renderSlots();
-      showToast('Güncellendi');
+      if (slot.durum === 'bos') {
+        const isim = prompt(`${saat} seansı için rezervasyon yapan kişinin adı (İsteğe bağlı):`);
+        if (isim === null) return; // İptal edildi
+        
+        await setSlot(currentSaha.id, currentTarih, saat, 'dolu', slot.fiyat, isim.trim());
+        if (saat === highlightTime) highlightTime = null;
+        await renderSlots();
+        showToast('Rezervasyon yapıldı');
+      } else if (slot.durum === 'dolu') {
+        const input = prompt(`Rezervasyon Güncelleme (${saat})\n\n- Rezervasyonu İPTAL etmek (boş yapmak) için boş bırakıp Tamam'a basın.\n- İsmi güncellemek için yeni ismi yazın:`, slot.isim || '');
+        if (input === null) return; // İptal edildi
+        
+        const cleanInput = input.trim();
+        if (cleanInput === '') {
+          // Rezervasyonu sil (Boş yap)
+          const phones = await getBildirimTalepleri(currentSaha.id, currentTarih, saat);
+          if (phones && phones.length > 0) {
+            if (confirm(`Dikkat! Bu saati bekleyen ${phones.length} kişi var.\nOnlara WhatsApp üzerinden haber vermek ister misiniz?`)) {
+              const msg = encodeURIComponent(`Merhaba, takip ettiğiniz ${currentSaha.ad} sahasındaki ${formatTarih(currentTarih)} ${saat} seansı şu an BOŞALDI. Hemen rezervasyon yapabilirsiniz.`);
+              phones.forEach(p => window.open(`https://wa.me/${p}?text=${msg}`, '_blank'));
+            }
+            await clearBildirimTalepleri(currentSaha.id, currentTarih, saat);
+          }
+          await setSlot(currentSaha.id, currentTarih, saat, 'bos', slot.fiyat, null);
+          if (saat === highlightTime) highlightTime = null;
+          await renderSlots();
+          showToast('Rezervasyon iptal edildi');
+        } else {
+          // İsmi güncelle
+          await setSlot(currentSaha.id, currentTarih, saat, 'dolu', slot.fiyat, cleanInput);
+          if (saat === highlightTime) highlightTime = null;
+          await renderSlots();
+          showToast('Rezervasyon ismi güncellendi');
+        }
+      }
     });
     slotGrid.appendChild(card);
   });
@@ -396,15 +469,25 @@ function initAboneModal() {
   if (isAboneModalInit) return;
   isAboneModalInit = true;
   
-  document.getElementById('aboneModalBtn').addEventListener('click', () => {
+  document.getElementById('aboneModalBtn').addEventListener('click', async () => {
     document.getElementById('aboneModal').style.display = 'flex';
+    
+    // Abone profillerini dropdown'a doldur
+    const select = document.getElementById('aboneProfileSelect');
+    select.innerHTML = '<option value="">-- Seçiniz (İsteğe Bağlı) --</option>';
+    const aboneler = await getAboneler(currentSaha.id);
+    aboneler.forEach(ab => {
+      select.add(new Option(`${ab.isim} (${ab.bakiye} ₺)`, ab.id));
+    });
+    
     renderAbonelikler();
   });
 
   document.getElementById('addAboneBtn').addEventListener('click', async () => {
     const g = parseInt(document.getElementById('aboneGun').value);
     const s = document.getElementById('aboneSaat').value;
-    await toggleAbonelik(currentSaha.id, g, s, true);
+    const profileId = document.getElementById('aboneProfileSelect').value || null;
+    await toggleAbonelik(currentSaha.id, g, s, true, profileId ? parseInt(profileId) : null);
     await renderAbonelikler();
     await renderSlots(); // Ana ekranı da güncelle
   });
@@ -424,8 +507,10 @@ async function renderAbonelikler() {
   abonelikler.forEach(a => {
     const item = document.createElement('div');
     item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px; background:rgba(255,255,255,0.05); margin-bottom:5px; border-radius:6px;';
+    
+    const aboneIsim = a.aboneler ? ` (${a.aboneler.isim})` : '';
     item.innerHTML = `
-      <span style="font-size:14px; font-weight:600;">${GUN_ISIMLERI[a.gun]} - ${a.saat}</span>
+      <span style="font-size:14px; font-weight:600;">${GUN_ISIMLERI[a.gun]} - ${a.saat}${aboneIsim}</span>
       <button class="btn btn-danger btn-sm" style="padding:4px 8px;">Sil</button>
     `;
     item.querySelector('button').addEventListener('click', async () => {
@@ -433,6 +518,117 @@ async function renderAbonelikler() {
       await renderAbonelikler();
       await renderSlots();
     });
+    list.appendChild(item); // Ekrandaki listeye ekleme yap
+  });
+}
+
+let isAboneYonetimModalInit = false;
+function initAboneYonetimModal() {
+  if (isAboneYonetimModalInit) return;
+  isAboneYonetimModalInit = true;
+
+  document.getElementById('aboneYonetimModalBtn').addEventListener('click', () => {
+    document.getElementById('aboneYonetimModal').style.display = 'flex';
+    renderAboneProfiles();
+  });
+
+  document.getElementById('addAboneProfileBtn').addEventListener('click', async () => {
+    const isim = document.getElementById('newAboneIsim').value.trim();
+    const telefon = document.getElementById('newAboneTelefon').value.trim();
+    const bakiyeInput = document.getElementById('newAboneBakiye').value.trim();
+    const bakiye = bakiyeInput ? parseFloat(bakiyeInput) : 0;
+
+    if (!isim) {
+      alert("Lütfen en azından abone ismini giriniz.");
+      return;
+    }
+
+    const res = await addAbone(currentSaha.id, isim, telefon, bakiye);
+    if (res) {
+      document.getElementById('newAboneIsim').value = '';
+      document.getElementById('newAboneTelefon').value = '';
+      document.getElementById('newAboneBakiye').value = '';
+      renderAboneProfiles();
+      showToast("Abone eklendi");
+    } else {
+      alert("Abone eklenemedi.");
+    }
+  });
+}
+
+async function renderAboneProfiles() {
+  const list = document.getElementById('aboneProfileList');
+  list.innerHTML = 'Yükleniyor...';
+  const aboneler = await getAboneler(currentSaha.id);
+
+  if (aboneler.length === 0) {
+    list.innerHTML = '<div style="font-size:12px; color:var(--text-muted); text-align:center; padding: 20px 0;">Kayıtlı abone bulunmuyor.</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  aboneler.forEach(ab => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(255,255,255,0.03); border:1px solid var(--dark-border); margin-bottom:8px; border-radius:8px;';
+    
+    item.innerHTML = `
+      <div style="flex:1; min-width:0; padding-right:10px;">
+        <div style="font-weight:700; color:var(--text-primary); font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ab.isim}</div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${ab.telefon ? '📞 ' + ab.telefon : 'Telefon belirtilmemiş'}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="background:rgba(57,211,83,0.1); border:1px solid rgba(57,211,83,0.2); padding:4px 8px; border-radius:6px; font-weight:800; color:#39D353; font-size:13px; min-width:75px; text-align:center;">${ab.bakiye.toLocaleString('tr-TR')} ₺</div>
+        <button class="btn btn-ghost btn-sm" style="padding:4px 8px; margin:0; font-weight:800; font-size:14px; line-height:1;" title="Bakiye Ekle">+</button>
+        <button class="btn btn-ghost btn-sm" style="padding:4px 8px; margin:0; font-weight:800; font-size:14px; line-height:1;" title="Bakiye Düş">-</button>
+        <button class="btn btn-danger btn-sm" style="padding:4px 8px; margin:0; line-height:1;" title="Sil">Sil</button>
+      </div>
+    `;
+
+    const btns = item.querySelectorAll('button');
+    
+    // Bakiye Ekle (+)
+    btns[0].addEventListener('click', async () => {
+      const miktar = prompt(`${ab.isim} için eklenecek bakiye miktarını girin (₺):`);
+      if (miktar === null) return;
+      const tutar = parseFloat(miktar);
+      if (isNaN(tutar) || tutar <= 0) {
+        alert("Geçersiz miktar.");
+        return;
+      }
+      const yeniBakiye = ab.bakiye + tutar;
+      if (await updateAboneBakiye(ab.id, yeniBakiye)) {
+        renderAboneProfiles();
+        showToast("Bakiye eklendi");
+      }
+    });
+
+    // Bakiye Düş (-)
+    btns[1].addEventListener('click', async () => {
+      const miktar = prompt(`${ab.isim} için düşülecek bakiye miktarını girin (₺):`);
+      if (miktar === null) return;
+      const tutar = parseFloat(miktar);
+      if (isNaN(tutar) || tutar <= 0) {
+        alert("Geçersiz miktar.");
+        return;
+      }
+      const yeniBakiye = ab.bakiye - tutar;
+      if (await updateAboneBakiye(ab.id, yeniBakiye)) {
+        renderAboneProfiles();
+        showToast("Bakiye düşüldü");
+      }
+    });
+
+    // Sil (Delete)
+    btns[2].addEventListener('click', async () => {
+      if (confirm(`${ab.isim} abonesini silmek istediğinize emin misiniz?\n(İlişkili tüm haftalık abonelikleri sahipsiz kalacaktır.)`)) {
+        if (await deleteAbone(ab.id)) {
+          renderAboneProfiles();
+          showToast("Abone silindi");
+        }
+      }
+    });
+
+    list.appendChild(item);
   });
 }
 

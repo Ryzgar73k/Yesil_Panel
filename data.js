@@ -105,14 +105,20 @@ async function getSlots(sahaId, tarih) {
   const d = new Date(tarih);
   const gun = d.getDay();
 
-  // Abonelikleri çek
+  // Abonelikleri çek (bağlı abone profillerinin ismiyle birlikte)
   const { data: aboneData } = await sb
     .from('abonelikler')
-    .select('saat')
+    .select('saat, aboneler(isim)')
     .eq('saha_id', sahaId)
     .eq('gun', gun);
   
-  const aboneSaatler = aboneData ? aboneData.map(a => a.saat) : [];
+  const aboneMap = {};
+  if (aboneData) {
+    aboneData.forEach(a => {
+      aboneMap[a.saat] = a.aboneler ? a.aboneler.isim : 'Abone';
+    });
+  }
+  const aboneSaatler = Object.keys(aboneMap);
 
   // Özel fiyatları çek
   const { data: fiyatData } = await sb
@@ -152,7 +158,8 @@ async function getSlots(sahaId, tarih) {
 
     result[s] = {
       durum: durum,
-      fiyat: dbSlot && dbSlot.fiyat ? dbSlot.fiyat : defaultPrice
+      fiyat: dbSlot && dbSlot.fiyat ? dbSlot.fiyat : defaultPrice,
+      isim: durum === 'abone' ? (aboneMap[s] || 'Abone') : (dbSlot ? dbSlot.rezervasyon_isim : null)
     };
   });
   return result;
@@ -175,13 +182,16 @@ async function setOzelFiyat(sahaId, saat, fiyat, isDeleting = false) {
 
 // --- Abonelik API ---
 async function getAbonelikler(sahaId) {
-  const { data, error } = await sb.from('abonelikler').select('*').eq('saha_id', sahaId);
+  const { data, error } = await sb
+    .from('abonelikler')
+    .select('*, aboneler(isim, telefon, bakiye)')
+    .eq('saha_id', sahaId);
   return error ? [] : data;
 }
 
-async function toggleAbonelik(sahaId, gun, saat, isAdding) {
+async function toggleAbonelik(sahaId, gun, saat, isAdding, aboneId = null) {
   if (isAdding) {
-    const { error } = await sb.from('abonelikler').insert({ saha_id: sahaId, gun, saat });
+    const { error } = await sb.from('abonelikler').insert({ saha_id: sahaId, gun, saat, abone_id: aboneId || null });
     if(error) {
       console.error(error);
       alert("Abonelik eklenemedi (Supabase Hatası): " + error.message);
@@ -215,7 +225,7 @@ async function clearBildirimTalepleri(sahaId, tarih, saat) {
   await sb.from('bildirim_talepleri').delete().match({ saha_id: sahaId, tarih, saat });
 }
 
-async function setSlot(sahaId, tarih, saat, durum, fiyat) {
+async function setSlot(sahaId, tarih, saat, durum, fiyat, isim = null) {
   const { error } = await sb
     .from('slots')
     .upsert({
@@ -223,7 +233,8 @@ async function setSlot(sahaId, tarih, saat, durum, fiyat) {
       tarih: tarih,
       saat: saat,
       durum: durum,
-      fiyat: fiyat
+      fiyat: fiyat,
+      rezervasyon_isim: isim || null
     }, { onConflict: 'saha_id, tarih, saat' });
 
   if (error) console.error('SetSlot error:', error);
@@ -280,4 +291,48 @@ async function deleteSaha(id) {
 
 function checkSuperAdminPin(pin) {
   return MASTER_PIN === pin;
+}
+
+// --- Abone Profilleri ve Bakiye Yönetimi API ---
+async function getAboneler(sahaId) {
+  const { data, error } = await sb
+    .from('aboneler')
+    .select('*')
+    .eq('saha_id', sahaId)
+    .order('isim', { ascending: true });
+  return error ? [] : data;
+}
+
+async function addAbone(sahaId, isim, telefon, bakiye) {
+  const { data, error } = await sb
+    .from('aboneler')
+    .insert({ saha_id: sahaId, isim, telefon, bakiye: bakiye || 0 })
+    .select()
+    .single();
+  if (error) {
+    console.error("Abone ekleme hatası:", error);
+  }
+  return error ? null : data;
+}
+
+async function updateAboneBakiye(aboneId, yeniBakiye) {
+  const { error } = await sb
+    .from('aboneler')
+    .update({ bakiye: yeniBakiye })
+    .eq('id', aboneId);
+  if (error) {
+    console.error("Bakiye güncelleme hatası:", error);
+  }
+  return !error;
+}
+
+async function deleteAbone(aboneId) {
+  const { error } = await sb
+    .from('aboneler')
+    .delete()
+    .eq('id', aboneId);
+  if (error) {
+    console.error("Abone silme hatası:", error);
+  }
+  return !error;
 }
